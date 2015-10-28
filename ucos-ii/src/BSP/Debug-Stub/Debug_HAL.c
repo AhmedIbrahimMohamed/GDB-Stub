@@ -100,7 +100,7 @@
  static Debug_MemWidth Get_Target_COPSVC_Class(CPU_INT32U Instruction);
 
  static Debug_MemWidth Get_Target_LDSTR_Media(CPU_INT32U Instruction);
- static Debug_MemWidth Shift_Shift_C(CPU_INT32U operand, CPU_INT08U shift_t, CPU_INT08U shift_n);
+ static CPU_INT32U Shift_Shift_C(CPU_INT32U operand, CPU_INT08U shift_t, CPU_INT08U shift_n);
  static CPU_INT08U Count_NumRegsLoaded( CPU_INT16U CPU_RegList);
 
 
@@ -620,12 +620,12 @@ static Debug_MemWidth Get_Target_DP_Class(CPU_INT32U Instruction)
 
 	/*get Rm[3-0] operand shared between instructions*/
 
-	Debug_MemWidth Rm = Debug_HAL_RegsBuffer[Instruction & Instruction_Rm_BM];
+	CPU_INT32U Rm = Debug_HAL_RegsBuffer[Instruction & Instruction_Rm_BM];
 	/*TODO:: Do we need to check if Rm is PC ,too.. to make a  PC prefetch*/
 	CPU_INT32U shifted;
 	Debug_MemWidth Target_address;
 	 /*Get Rn value TODO::Do we need PC prefetch */
-	               Debug_MemWidth Rn  =  Debug_HAL_RegsBuffer[(Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP];
+	CPU_INT32U Rn  =  Debug_HAL_RegsBuffer[(Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP];
 
                  /*Decode different sub-classes inside Data-Processing Class*/
 	/*Combine 3 subclasses in this if-condition*/
@@ -814,9 +814,9 @@ return 0;
 */
 static Debug_MemWidth Get_Target_LDSTR_Class(CPU_INT32U Instruction)
 {
-	Debug_MemWidth Rn = Debug_HAL_RegsBuffer[(Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP];
-	Debug_MemWidth * address =0;
-	Debug_MemWidth  word =0;
+	CPU_INT32U Rn = (CPU_INT32U)Debug_HAL_RegsBuffer[(Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP];
+	CPU_INT32U * address =0;
+	CPU_INT32U  word =0;
 	CPU_INT32U offset;
 
 
@@ -839,7 +839,7 @@ static Debug_MemWidth Get_Target_LDSTR_Class(CPU_INT32U Instruction)
 
 						case LDSTR_WB_Encode_A1:/*using shifted-register*/
 							offset = (CPU_INT32U)Shift_Shift_C (
-									                               Debug_HAL_RegsBuffer[Instruction & Instruction_Rm_BM] ,
+									                               (CPU_INT32U)Debug_HAL_RegsBuffer[Instruction & Instruction_Rm_BM] ,
 									                              ((Instruction & Instruction_ShiftType_BM)>> Instruction_ShiftType_BP),
 									                              ((Instruction & Instruction_imm5_BM)>> Instruction_imm5_BP)
 									                              );
@@ -858,14 +858,14 @@ static Debug_MemWidth Get_Target_LDSTR_Class(CPU_INT32U Instruction)
 				 *            else0  --> Rn - immediate*/
 
 				if(Instruction & 0x00800000) /*if U is set*/
-					address = (CPU_INT32U)Rn + ( (!(Instruction & 0x01000000))/*if P is cleared, add offset*/ *offset );
+					address = Rn + ( (!(Instruction & 0x01000000))/*if P is cleared, add offset*/ *offset );
 				else
-					address = (CPU_INT32U)Rn - ( (!(Instruction & 0x01000000)) *offset );
+					address = Rn - ( (!(Instruction & 0x01000000)) *offset );
 
 				/*Check if it is byte-access or word access*/
 
 				if ( (Instruction & 0x00500000) == 0x00500000)/*if it is byte access*/
-							word = (Debug_MemWidth) ( (CPU_INT08U)(*address) );
+							word = (CPU_INT32U) ( (CPU_INT08U)(*address) );
 
 				else /*if it is word access*/
 					word = *address;
@@ -931,7 +931,7 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 		if( (Instruction & PC_RegList_BM) && (Instruction & 0x00100000))/*Is PC in Reg_List and we are in Load/POP not store/push*/
 		{
 
-			Debug_MemWidth Rn = Debug_HAL_RegsBuffer[(Instruction &Instruction_Rn_BM) >> Instruction_Rn_BP];
+			CPU_INT32U Rn = Debug_HAL_RegsBuffer[(Instruction &Instruction_Rn_BM) >> Instruction_Rn_BP];
 
 			if(((Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP) == Debug_HAL_INST_PC_ID)/*in case of LDR/STR(literal)*/
 						Rn += 8;  /*PC at prefetch stage in pipeline*/
@@ -939,7 +939,7 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 			/*Calculate how many register are to be loaded*/
 			CPU_INT08U regs_Number_loaded = Count_NumRegsLoaded((CPU_INT16U)(Instruction & 0x0000FFFF));
 
-			Debug_MemWidth *address ;
+			CPU_INT32U *address ;
 
 			/*Do we increment or decrement*/
 			if((Instruction & 0x02C00000) == 0x00800000) /*Increment*/
@@ -1067,7 +1067,7 @@ return 0;
 * Note(s)     : none
 *********************************************************************************************************
 */
-static Debug_MemWidth Shift_Shift_C(CPU_INT32U operand, CPU_INT08U shift_t, CPU_INT08U shift_n)
+static CPU_INT32U Shift_Shift_C(CPU_INT32U operand, CPU_INT08U shift_t, CPU_INT08U shift_n)
 {
 
 	CPU_INT08U Shift_n_moduluo =  shift_n%32;
@@ -1151,7 +1151,7 @@ static CPU_INT08U Count_NumRegsLoaded( CPU_INT16U CPU_RegList)
 {
 
 	CPU_INT32U Rn = Debug_HAL_RegsBuffer[(Instruction &Instruction_Rn_BM) >> Instruction_Rn_BP];
-	Debug_MemWidth *address;
+	CPU_INT32U *address;
 
 	/*check each instruction*/
 

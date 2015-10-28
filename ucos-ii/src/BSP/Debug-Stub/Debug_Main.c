@@ -503,7 +503,7 @@ CPU_INT08U Debug_Main_Step_machine_instruction(Debug_TID_t ThreadID,void *Comman
 	//Debug_HAL_Regs_ReadOne(current_thread_OF_Focus,PC_Offset ,&current_PC);
 	current_PC = Debug_HAL_RegsBuffer[PC_Offset];
 
-	target_PC = current_PC + 4;  /*initially, next PC is 4 bytes away  from current PC */
+	target_PC = current_PC + 1;  /*initially, next PC is 4 bytes away  from current PC */
 
 	         /*Now, We need to Know the real target  Address of the current PC to know where will put the Breakpoint */
 
@@ -514,7 +514,7 @@ CPU_INT08U Debug_Main_Step_machine_instruction(Debug_TID_t ThreadID,void *Comman
 		/*step # 2  IF Needed : Update PC with Target PC from instructino encoding*/
 		/*Dcecode conditional Instructions : condition code from 0-->14 */
 
-		target_PC = Debug_HAL_INST_Get_Target_Address((CPU_INT32U)*current_PC);
+		target_PC = (Debug_MemWidth *)Debug_HAL_INST_Get_Target_Address((CPU_INT32U)*current_PC);
 	}
 	else if(Cond_Res == Debug_Instruction_UNCOND)
 	{

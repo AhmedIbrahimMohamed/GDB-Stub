@@ -562,7 +562,7 @@ CPU_INT08U Debug_HAL_INST_Is_Condition_True(CPU_INT32U Instruction,Debug_TID_t T
 *********************************************************************************************************
 */
 
-Debug_MemWidth *Debug_HAL_INST_Get_Target_Address(CPU_INT32U Instruction)
+CPU_INT32U *Debug_HAL_INST_Get_Target_Address(CPU_INT32U Instruction)
 {
 
 	Debug_MemWidth *Target_Address;
@@ -637,7 +637,7 @@ static Debug_MemWidth Get_Target_DP_Class(CPU_INT32U Instruction)
 
 			/*if PC is source register Rn*/
 			if ( ((Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP) == Debug_HAL_INST_PC_ID)
-				Rn += 8; /*get PC value at prefetch*/
+				Rn += 8; /*get PC value at prefetch stage*/
 			CPU_INT08U imm5Shift = 0;
 			CPU_INT08U shift_type =  (Instruction & Instruction_ShiftType_BM) >>Instruction_ShiftType_BP ;
 
@@ -914,10 +914,9 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 		 * SignExtend(x, i) = Replicate(TopBit(x), i-Len(x)) : x
 		 * */
 
-		//return  ( Debug_HAL_RegsBuffer[PC_Offset] + (CPU_INT32S)(Instruction & Instruction_imm24_BM) )& 0xFFFFFFF6 ;
 		CPU_INT32U offset = ( (CPU_INT32U)(Instruction & Instruction_imm24_BM) << 2);
 		if(Instruction & 0x00800000)
-			offset |= 0xFC000000; /*replicate Top-Bit of imm24 bit (32-26)times*/
+			offset |= 0xFC000000; /*replicate Top-Bit of imm24 bit (32total-26shifted imm24)times*/
 
 		return ( Debug_HAL_RegsBuffer[PC_Offset] & 0xFFFFFFF6 ) + 8/*for prefetch stage */ + offset ;
 	}
@@ -1170,12 +1169,13 @@ static CPU_INT08U Count_NumRegsLoaded( CPU_INT16U CPU_RegList)
 
 		/*B or BLX(immediate)*/
 				/*targetAddress = Align(PC,4) + SignExtend(imm24:'00', 32);
-				 * This is only Encoding A1
-				 * */
+		 * SignExtend(x, i) = Replicate(TopBit(x), i-Len(x)) : x
+		 * */
+		CPU_INT32U offset = ( (CPU_INT32U)(Instruction & Instruction_imm24_BM) << 2);
+		if(Instruction & 0x00800000)
+			offset |= 0xFC000000; /*replicate Top-Bit of imm24 bit (32total-26shifted imm24)times*/
 
-				//return (Debug_HAL_RegsBuffer[PC_Offset] & 0x0000000C) + (CPU_INT32S)(Instruction & Instruction_imm24_BM);
-
-				return ( (Debug_HAL_RegsBuffer[PC_Offset] >> 2) << 2) + (CPU_INT32S)((Instruction & Instruction_imm24_BM) << 2);
+		return ( Debug_HAL_RegsBuffer[PC_Offset] & 0xFFFFFFF6 ) + 8/*for prefetch stage */ + offset ;
 	}
 
 	if((Instruction & 0x0FF00000) == 0x0C500000)/*Is it MRRC,MRRC2 */

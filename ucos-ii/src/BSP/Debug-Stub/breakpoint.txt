@@ -1,0 +1,2 @@
+A8-346 :: demo for breakpoint instruction in ARM-Reference manual 
+opcode of BKPT is ebffff53 with immediate value = 0

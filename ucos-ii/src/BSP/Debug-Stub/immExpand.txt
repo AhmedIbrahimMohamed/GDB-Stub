@@ -1,0 +1,9 @@
+// ARMExpandImm_C()
+// ================
+(bits(32), bit) ARMExpandImm_C(bits(12) imm12, bit carry_in)
+
+unrotated_value = ZeroExtend(imm12<7:0>, 32);
+
+(imm32, carry_out) = Shift_C(unrotated_value, SRType_ROR, 2*UInt(imm12<11:8>), carry_in);
+
+return (imm32, carry_out);

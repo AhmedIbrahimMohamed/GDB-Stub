@@ -1,0 +1,103 @@
+void RSP_Hex_test()
+  {
+
+
+
+	    //Debug_Hex2Mem(CPU_INT08U *HexBuffer,CPU_INT08U *MemByteBuffer, Debug_Len_t ByteCount);
+
+	 CPU_INT08U hexchar = Debug_RSP_Byte2Hex(-1 );
+	 hexchar = Debug_RSP_Byte2Hex(255 );
+	 hexchar = Debug_RSP_Byte2Hex(14 );
+	 hexchar = Debug_RSP_Byte2Hex(5 );
+	 hexchar = Debug_RSP_Byte2Hex(9 );
+	 hexchar = Debug_RSP_Byte2Hex(10);
+	 hexchar = Debug_RSP_Byte2Hex(0);
+
+	 CPU_INT08U Halfbyte;
+	 Halfbyte =  Debug_RSP_Hex2byte('A');
+	 Halfbyte =  Debug_RSP_Hex2byte('a');
+	 Halfbyte =  Debug_RSP_Hex2byte('F');
+	 Halfbyte =  Debug_RSP_Hex2byte('f');
+	 Halfbyte =  Debug_RSP_Hex2byte('1');
+	 Halfbyte =  Debug_RSP_Hex2byte('0');
+	 Halfbyte =  Debug_RSP_Hex2byte('G');
+	 Halfbyte =  Debug_RSP_Hex2byte('$');
+
+	 CPU_INT08U HEXBuf[]={'0','B','c','f','5','8','1','0','g','5','9','a','D','C','6','7',
+	                      'A','B','c','f','5','8','9','0','4','5','9','a','D','C','6','7'};
+	 CPU_INT08U ByteBuf[4]={50};
+	 Debug_MemWidth word = 0x70348E90;
+	 CPU_INT08U * HexBufptr = HEXBuf;
+	// Debug_Hex2Word(CPU_INT08U *HexStream, Debug_MemWidth * word);
+	 Debug_Hex2Word(&HexBufptr, &word);
+	 //Debug_Hex2Word(&HEXBuf, &word);
+	  HexBufptr = HEXBuf;
+	  word =0x70348E90;
+	 Debug_Word2Hex(&word , &HexBufptr);
+
+	 //Testing Words (4-byte)
+
+	  Debug_Mem2Hex(&word, 4,HEXBuf);
+
+	  Debug_MemWidth *wordptr = &word;
+
+	  word = 0;
+
+	  Debug_Hex2Mem(HEXBuf,(CPU_INT08U *)&word,4);
+
+	  //Testing Double word (8-bytes)
+
+	  CPU_INT64U dword = 0x70348E905984fd1c;
+
+	  /**TEST
+	   *
+	   * */
+      Debug_RSP_Init();
+	  Debug_RSP_Get_Packet();
+	  Debug_RSP_Process_Packet();
+
+	  /*TEst read after right to check the memory write */
+//	  Debug_RSP_Get_Packet();
+	  /*$m1207c0,40#5a   value of word variable*/
+	  /*send $M1207f8,4:55555555#f7    update word variable*/
+//  Debug_RSP_Process_Packet();
+
+	  /*TEST
+	   *
+	   * */
+	  Debug_Mem2Hex((CPU_INT32U *)&dword, 8,HEXBuf);
+
+	  CPU_INT64U *dwordptr = & dword;
+
+	//  Debug_RSP_Get_Packet();
+
+	  /*send $m1207c0,40#5a   value of dword variable*/
+	  /*send $M1207e8,8:7856341278563412#9a  update dword variable*/
+	  //Debug_RSP_Process_Packet();
+	  dword = 0;
+
+	  Debug_Hex2Mem(HEXBuf,(CPU_INT08U *)& dword,8);
+
+	 //Testing array of words
+	  CPU_INT32U registers [4] = {0x70348E90, 0x753DfBca,0x70348E90,0x2004A06c};
+
+	 CPU_INT32U * arrptr = registers;
+	  CPU_INT08U regHExBuffer[32]= {0x0};
+
+	  Debug_Mem2Hex(registers, 4*sizeof(CPU_INT32U),regHExBuffer);
+
+	  registers[0] = 0x0;
+	  registers[1] = 0x0;
+	  registers[2] = 0x0;
+	  registers[3] = 0x0;
+
+	  Debug_Hex2Mem(regHExBuffer,(CPU_INT08U *)registers,4*(sizeof(CPU_INT32U)));
+
+
+	  	  //Testing Double word (8-bytes)
+
+
+
+
+
+  }

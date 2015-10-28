@@ -1,0 +1,70 @@
+* Merge source code of to final version
+  - "What  was done.docx"
+
+* see design.docx document and discuss some issues in it 
+
+  
+*complete  instruction decoding functions
+- rest of instruction sub classes --> ok  almost
+- Auxilary functions like  shift_Shift_c() 
+	-- need revise corresponding Aux functions from ARM and assure its correctness 
+
+*complete s case in process packet  
+ -handle odd cases in s command : undefined instruction or error in inserting breakpoint 
+
+*complete GDB_Exception handling for all types of exceptions
+
+
+*handle : saved the "Switched from" Task ID/Prio
+-revise that pointers to addresses are incremented/decremented correctly
+-commenting all code in uniform manner
+
+
+
+*implement D,K commands
+- i think  it is a Big addition
+
+* need discuss the TODOs in source code for odd cases
+
+
+===================================
+New TODO-list:
+
+1- map exceptions numbers to signal numbers
+- in gdb exception handler 
+- in case s,c in process_packet
+
+2- exhaustive commenting of code 
+- for step-related functions
+- for ahmed functions 
+- revise rest of stub functions 
+
+3- in next meeting /10/2015
+- we have merged code after 1,2 modifications
+- testing Z/z commands
+- understand and make a test plan for stepping-related functions
+	-- make code review
+	--input instructions
+	=================================
+	discussion 
+	
+	1- current_Thread_of_focus 
+	
+	it should be used in process_Packet 
+	should it be passes to process_pacekt() as input??
+	
+	2- review signdness and unsigndness of variables in decoding insrtutions functions
+	
+	================================================================================================
+	New TODO list
+	
+	1- ensure PC-Prefetch if PC is the source?
+	RT-thread make pc-prefetch of Rn : in case of data processing and LDR case , LDM,Branch 
+	2- ensure signdnessof operations
+	  RT-thread treats mostly all variable as unsigned long 
+	
+	3-  review all stub functions in
+	   - code review and comments
+	4- incrementing PC as pointer
+	   - RT-thread insrement pointer by 1 to get next ARM-instruction
+	       and increment an integer by 4  to get next ARM-instruction

@@ -682,23 +682,42 @@ static void Debug_Main_Init_CommandFunctions()
    Debug_RSP_Commands_Functions[Debug_RSP_ReportHaltReason] = Debug_Main_Report_Halt_Reason;
  }
 
-CPU_INT32S Gdb_Handle_Exception(CPU_INT08U Exception_ID)
+void Gdb_Handle_Exception(CPU_INT08U Exception_ID)
 {
 	//TODO:
 	//Debug_MemWidth Thread_PC;
-	//current_thread_OF_Focus = OSPrioHighRdy;
-	//Debug_HAL_Regs_ReadOne(current_thread_OF_Focus,PC_Offset,&Thread_PC);
+	current_thread_OF_Focus = OSPrioHighRdy;
+	/*read all registers for the interrupted thread/tasks for fast access to its context*/
+	Debug_HAL_Regs_Readall(current_thread_OF_Focus);
 	//TODO::handle exceptions To signal mapping
-	//switch ()
+	switch (Exception_ID)
 
-		//{
-	//Debug_Block_Message =
-	//}
+	{
+	      case OS_CPU_ARM_EXCEPT_UND:
+	    	  Command_opts_HaltSig.Signum = SIGILL;
+	    	  Debug_Block_Message = Debug_Exception_UNDEFINED_INSTRUCTION ;
+	      break;
 
+	      case OS_CPU_ARM_EXCEPT_ABORT_DATA:
+	    	  Command_opts_HaltSig.Signum = SIGBUS;
+	    	  Debug_Block_Message = Debug_Exception_MemoryError ;
+	      break;
+
+	      case OS_CPU_ARM_EXCEPT_ABORT_PREFETCH:
+	        	if(Debug_HAL_RegsBuffer[PC_Offset] == 0xE1200070/**/ )/*if prefetch abort is due to BKPT debug-event*/
+	        	{
+	        		Command_opts_HaltSig.Signum = SIGTRAP;
+	        	    Debug_Block_Message = Debug_Exception_BKPT_Hit;
+	        	}
+	        else /*It is program prefetch abort*/
+	        	{
+					Command_opts_HaltSig.Signum = SIGBUS;
+					Debug_Block_Message = Debug_Exception_MemoryError;
+	        	}
+	       break;
+
+	}
 	Debug_RTOS_StubPost((void *)&Debug_Block_Message);
-	Deactivate_SW_BreakPoints();//deactivate user BKPTs = and remove Stub bKPT
+	Deactivate_SW_BreakPoints();//de-activate user BKPTs  and remove Stub bKPT
 
-
-
-	return 0;
 }

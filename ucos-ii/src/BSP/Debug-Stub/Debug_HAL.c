@@ -83,7 +83,9 @@
 */
 
  _gdb_arch arch_gdb_ops = {
-	.gdb_bpt_instr		=  {0xfe, 0xde, 0xff, 0xe7}  //Little-Endian
+	//.gdb_bpt_instr		=  {0xfe, 0xde, 0xff, 0xe7}  //Little-Endian
+	/*this is not a "BKPT" , what is this */
+		 .gdb_bpt_instr		=  {0x70, 0x00, 0x20, 0xe1} //BKPT
 };
 
 /*

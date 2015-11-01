@@ -226,7 +226,8 @@ enum {
 	SIGINT  = 2,  /*sent when receiving ctrl+c from gdb host!!*/
 	SIGILL  = 4,
 	SIGTRAP,/*5*/
-	SIGABRT/*6*/
+	SIGABRT,/*6*/
+	SIGBUS = 10
 
 }Debug_HAL_Sig_GDBNumbers;
 

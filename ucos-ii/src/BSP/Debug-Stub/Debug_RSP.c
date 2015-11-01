@@ -401,14 +401,14 @@ do{
   *               (2)
   *********************************************************************************************************
   */
-  CPU_INT08U Debug_RSP_Process_Packet(void)
+  CPU_INT08U Debug_RSP_Process_Packet(Debug_TID_t Thread_of_focus)
   {
 	  /*TODO:: Reset the outbuffer to 0's to put the new response of the received command*/
 	  /*This loop is too slow and suspicious as counter is reset or low value after high value 0->97->298->78 !!!*/
 	  Debug_RSP_resetBuffer(Debug_RSP_Payload_OutBuf);
 
 	  /*Chosoe a task ID here for a matter of testing*/
-	  CPU_INT08U taskID = 0 ;/*would be ignored for now by Debug_Main_xx() functions*/
+	 // CPU_INT08U taskID = 0 ;/*would be ignored for now by Debug_Main_xx() functions*/
 	  CPU_INT08U *Cmd_Param_start =  &Debug_RSP_Payload_InBuf[1];
 	  CPU_INT08U *Debug_INVALID = "";   /*Invalid reply string for invalid command parameters/options*/
 	  //Debug_RSP_Info_pP *paramPtr = &Command_opts_pP;
@@ -424,7 +424,7 @@ do{
 	  	         case '?':/* report stopped reason */
 	  	        	/*TODO:: Need Test if we are here , does GDB Reconnecting*/
 	  	            Debug_RSP_Payload_OutBuf[0]= 'S';
-	  	        	(*Debug_RSP_Commands_Functions[Debug_RSP_ReportHaltReason])(taskID,(void *)&Command_opts_HaltSig);
+	  	        	(*Debug_RSP_Commands_Functions[Debug_RSP_ReportHaltReason])(Thread_of_focus,(void *)&Command_opts_HaltSig);
 	  	        	Debug_RSP_Payload_OutBuf[1] = Debug_RSP_Byte2Hex(Command_opts_HaltSig.Signum >> 4);
 	  	        	Debug_RSP_Payload_OutBuf[2] = Debug_RSP_Byte2Hex(Command_opts_HaltSig.Signum & 0xF);
 	  	        	Debug_RSP_Put_Packet(&Debug_RSP_Payload_OutBuf[0],Debug_RSP_ReportHaltReason );
@@ -433,7 +433,7 @@ do{
 
 	  	         case 'g':       /* return the value of the CPU registers */
                                  /*'g'*/
-					    (*Debug_RSP_Commands_Functions[Debug_RSP_g])(taskID,(void *)&Command_opts_gG);
+					    (*Debug_RSP_Commands_Functions[Debug_RSP_g])(Thread_of_focus,(void *)&Command_opts_gG);
 
 					    /*TEST : see value of RegisterarrayPtr here*/
 						if(Debug_Mem2Hex(Command_opts_gG.RegisterarrayPtr,Command_opts_gG.bytecount ,&Debug_RSP_Payload_OutBuf[0])
@@ -448,7 +448,7 @@ do{
 						if (Debug_Hex2Mem(Cmd_Param_start, (CPU_INT08U *)Command_opts_gG.RegisterarrayPtr,Command_opts_gG.bytecount)
 								== DEBUG_SUCCESS)
 							{
-							   (*Debug_RSP_Commands_Functions[Debug_RSP_G])(taskID,(void *)&Command_opts_gG);
+							   (*Debug_RSP_Commands_Functions[Debug_RSP_G])(Thread_of_focus,(void *)&Command_opts_gG);
 
 							   Debug_RSP_OK_Packet();
 							}else
@@ -476,7 +476,7 @@ do{
 	  	        			break;
 	  	        		 }
 
-	  	        		 (*Debug_RSP_Commands_Functions[Debug_RSP_m])(taskID,(void *)&Command_opts_mM);
+	  	        		 (*Debug_RSP_Commands_Functions[Debug_RSP_m])(Thread_of_focus,(void *)&Command_opts_mM);
 
 						 if(Debug_Mem2Hex(Command_opts_mM.MemoryArrayptr,Command_opts_mM.Count, &Debug_RSP_Payload_OutBuf[0])
 								== DEBUG_SUCCESS)
@@ -514,7 +514,7 @@ do{
 									break;
 								 }
 
- 							if( (*Debug_RSP_Commands_Functions[Debug_RSP_M])(taskID,(void *)&Command_opts_mM) == DEBUG_SUCCESS)
+ 							if( (*Debug_RSP_Commands_Functions[Debug_RSP_M])(Thread_of_focus,(void *)&Command_opts_mM) == DEBUG_SUCCESS)
 								Debug_RSP_OK_Packet();
 							else{
 								Debug_INVALID = "\nCan not set memory values in <M> command packet\n";
@@ -543,7 +543,7 @@ do{
 
 						 if (Debug_Hex2Word(&Cmd_Param_start, &(Command_opts_pP.RegID) )){
 
-							 if( (*Debug_RSP_Commands_Functions[Debug_RSP_p])(taskID,(void *)&Command_opts_pP)
+							 if( (*Debug_RSP_Commands_Functions[Debug_RSP_p])(Thread_of_focus,(void *)&Command_opts_pP)
 									 == DEBUG_ERR_INVALID_REGID)
 								{
 								 Debug_INVALID = "\nRegno is outside supported IDs in <p> command packet\n";
@@ -579,7 +579,7 @@ do{
 							/*TEST : see Value of Cmd_Param_start here should be advanced
 							 *       see value of RegID and RegVal*/
 						{
-							if ((*Debug_RSP_Commands_Functions[Debug_RSP_P])(taskID,(void *)&Command_opts_pP) == DEBUG_SUCCESS)
+							if ((*Debug_RSP_Commands_Functions[Debug_RSP_P])(Thread_of_focus,(void *)&Command_opts_pP) == DEBUG_SUCCESS)
 								Debug_RSP_OK_Packet();
 							 else {
 										Debug_INVALID = "\nRegno in <P> command packet is outside supported IDs\n";
@@ -606,120 +606,113 @@ do{
 	  	         case 's': /* sAA..AA    step form address AA..AA (optional) */
 
 	  	        	 /* 1- get  an address to step from if GDB sent*/
-	  	        	Debug_Hex2Word(&Cmd_Param_start,&Resume_Address);
+	  	        	if(Debug_Hex2Word(&Cmd_Param_start,&Resume_Address))
+	  	        	{
+						/*2-  Insert breakpoint at next executed instruction address */
+						err = (*Debug_RSP_Commands_Functions[Debug_RSP_s])(Thread_of_focus,(void *)Resume_Address);
+						if (err == DEBUG_SUCCESS || err == DEBUG_Bad_Instruction )
 
-	  	        	/*2-  Insert breakpoint at next executed instruction address */
-	  	        	err = (*Debug_RSP_Commands_Functions[Debug_RSP_s])(taskID,(void *)Resume_Address);
-	  	        	if (err == DEBUG_SUCCESS || err == DEBUG_Bad_Instruction )
+						{
+							/*3- activate all SW breakpoints to be hit when resumed*/
+							Activate_Sw_BreakPoints();
 
-					{
+							/*4- Pend Stub Task so that program resumes */
+							stub_message = (*Debug_Stub_PendPtr)();
 
-
-
-	  	        		/*3- activate all SW breakpoints to be hit when resumed*/
-	  	        		Activate_Sw_BreakPoints();
-
-	  	        		/*4- Pend Stub Task so that program resumes */
-	  	        		stub_message = (*Debug_Stub_PendPtr)();
-
-	  	        		/*Examine the sent message from an Exception/Debug Event after stub wakes up*/
-	  	        		if (stub_message == Debug_Exception_BKPT_Hit)
-	  	        		{
-
-	  	        		    Debug_RSP_Payload_OutBuf[0]= 'S';
+							/*Here , Stub resume with the appropriate Exception Signal,
+							 * Note , Stub will not wake up in case of the following Exceptions
+							 * RST : system Reset
+							 * RSVD : Reserved Exception Entry
+							 * SVC  : supervisor call
+							 *  */
+							Debug_RSP_Payload_OutBuf[0]= 'S';
 							Debug_RSP_Payload_OutBuf[1] = Debug_RSP_Byte2Hex(Command_opts_HaltSig.Signum >> 4);
 							Debug_RSP_Payload_OutBuf[2] = Debug_RSP_Byte2Hex(Command_opts_HaltSig.Signum & 0xF);
 							Debug_RSP_Put_Packet(&Debug_RSP_Payload_OutBuf[0],Debug_RSP_s );
-
-	  	        		}
-	  	        		else if (stub_message == Debug_Exception_UNDEFINED_INSTRUCTION)
-	  	        		{
-
-	  	        			/*TODO::*/
-	  	        		}
-	  	        		else
-	  	        		{
-	  	        			/**TODO::*/
-	  	        		}
-
-					}
-	  	        	else /*Error in setting breakpoint*/
-	  	        	{
-	  	        		/**TODO:: in case of DEBUG_BRKPT_ERROR_UnableSET, will we
-	  	        		 * 1- resume without breakpoint??
-	  	        		 * 2- would we send Error Packet to gdb, no it is not in standard
-	  	        		 * 3- send console packet with error to user and resume*/
+						}
+						else /*Error in setting breakpoint*/
+						{
+							/**TODO:: in case of DEBUG_BRKPT_ERROR_UnableSET, will we
+							 * 1- resume without breakpoint??
+							 * 2- would we send Error Packet to gdb, no it is not in standard
+							 * 3- send console packet with error to user and resume*/
 
 
+						}
+	  	        	}//if command parameters parsed correctly
+	  	        	else{
+	  	        		Debug_INVALID = "\nINVALID Syntax or INVALID Hex Characters in <s> command packet ID\n";
+						//Debug_RSP_Put_Packet(Debug_INVALID, 0);
+						Debug_RSP_Error_Packet(DEBUG_Bad_COMMAND_ARGS);
 	  	        	}
 
 	  	        	 break;
 	  	         case 'c': /* cAA..AA    Continue at address AA..AA (optional) */
 
-	  	        	 /*  get  an address to resume from if GDB sent*/
-	  	        	Debug_Hex2Word(&Cmd_Param_start,&Resume_Address);
+					 /*  get  an address to resume from if GDB sent*/
+					Debug_Hex2Word(&Cmd_Param_start,&Resume_Address);
 
-	  	        	err = (*Debug_RSP_Commands_Functions[Debug_RSP_c])(taskID,(void *)Resume_Address);
+					err = (*Debug_RSP_Commands_Functions[Debug_RSP_c])(Thread_of_focus,(void *)Resume_Address);
 
-	  	        	/*2- pend on exception occurance */
-	  	        	/*Pending mechanism*/
-							stub_message = (*Debug_Stub_PendPtr)();
+					/*pend on exception occurance */
+					/*Pending mechanism*/
+					stub_message = (*Debug_Stub_PendPtr)();
 
-							/*Examine the sent message from an Exception/Debug Event after stub wakes up*/
-							if (stub_message == Debug_Exception_BKPT_Hit)
-							{
+					/*Examine the sent message from an Exception/Debug Event after stub wakes up*/
+					/*1- activate all SW breakpoints to be hit when resumed*/
+					Activate_Sw_BreakPoints();
 
-								Debug_RSP_Payload_OutBuf[0]= 'S';
-								Debug_RSP_Payload_OutBuf[1] = Debug_RSP_Byte2Hex(Command_opts_HaltSig.Signum >> 4);
-								Debug_RSP_Payload_OutBuf[2] = Debug_RSP_Byte2Hex(Command_opts_HaltSig.Signum & 0xF);
-								Debug_RSP_Put_Packet(&Debug_RSP_Payload_OutBuf[0],Debug_RSP_s );
+					/*2- Pend Stub Task so that program resumes */
+					stub_message = (*Debug_Stub_PendPtr)();
 
-							}
-							else if (stub_message == Debug_Exception_UNDEFINED_INSTRUCTION)
-							{
+					/*Here , Stub resume with the appropriate Exception Signal,
+					 * Note , Stub will not wake up in case of the following Exceptions
+					 * RST : system Reset
+					 * RSVD : Reserved Exception Entry
+					 * SVC  : supervisor call
+					 *  */
+					Debug_RSP_Payload_OutBuf[0]= 'S';
+					Debug_RSP_Payload_OutBuf[1] = Debug_RSP_Byte2Hex(Command_opts_HaltSig.Signum >> 4);
+					Debug_RSP_Payload_OutBuf[2] = Debug_RSP_Byte2Hex(Command_opts_HaltSig.Signum & 0xF);
+					Debug_RSP_Put_Packet(&Debug_RSP_Payload_OutBuf[0],Debug_RSP_s );
 
-								/*TODO::*/
-							}
-							else
-							{
-								/**TODO::*/
-							}
-	  	        	 break;
+				break;
+
 	  	       case 'z':/* Break point remove */
 	  	       case 'Z':/* Break point set */
 
 	  	    	 err = IsBreakPointValid(Debug_RSP_Payload_InBuf,&BpAddress,&BpLength,&BpType);
-	  	    	 	  	    	                if( err == DEBUG_SUCCESS)
-	  	    	 	  	       	  	        	 {
-	  	    	 	  	       	  	        		Command_opts_znZn.BkptAddress=&BpAddress;
-	  	    	 	  	       	  	        		Command_opts_znZn.Kind=BpType;
-	  	    	 										if(Debug_RSP_Payload_InBuf[0]=='Z')
-	  	    	 										{
-	  	    	 											if((*Debug_RSP_Commands_Functions[Debug_RSP_Z0])(0,(void *)&Command_opts_znZn) == DEBUG_BRKPT_ERROR_UnableSET)
-	  	    	 											{
-	  	    	 												Debug_INVALID = "\nCan not set breakpoint \n";
-	  	    	 												//Debug_RSP_Put_Packet(Debug_INVALID, 0);
-	  	    	 												Debug_RSP_Error_Packet(DEBUG_BRKPT_ERROR_UnableSET);
-	  	    	 												break;
-	  	    	 											}
-	  	    	 											else
-	  	    	 												Debug_RSP_OK_Packet();
-	  	    	 										}
-	  	    	 											else if(Debug_RSP_Payload_InBuf[0]=='z')
-	  	    	 											{//TODO: check error Code from Remove SoftWare BreakPoint
-	  	    	 													if((*Debug_RSP_Commands_Functions[Debug_RSP_z0])(0,(void *)&Command_opts_znZn) == Debug_BKPT_Remove_AddressError)
-	  	    	 												{
-	  	    	 													Debug_INVALID = "\nCan not Remove or Not Exist breakpoint \n";
-	  	    	 													//Debug_RSP_Put_Packet(Debug_INVALID, 0);
-	  	    	 													Debug_RSP_Error_Packet(Debug_BKPT_Remove_AddressError);
-	  	    	 													break;
-	  	    	 												}
-	  	    	 												else
-	  	    	 													Debug_RSP_OK_Packet();
-	  	    	 											}
-	  	    	 	  	       	  	        	 }
-	  	    	 	  	       	  	        	 else
-	  	    	 	  	       	  	      	        Debug_RSP_Error_Packet(err);
+				if( err == DEBUG_SUCCESS)
+				 {
+					Command_opts_znZn.BkptAddress=&BpAddress;
+					Command_opts_znZn.Kind=BpType;
+						if(Debug_RSP_Payload_InBuf[0]=='Z')
+						{
+							if((*Debug_RSP_Commands_Functions[Debug_RSP_Z0])(0,(void *)&Command_opts_znZn) == DEBUG_BRKPT_ERROR_UnableSET)
+							{
+								Debug_INVALID = "\nCan not set breakpoint \n";
+								//Debug_RSP_Put_Packet(Debug_INVALID, 0);
+								Debug_RSP_Error_Packet(DEBUG_BRKPT_ERROR_UnableSET);
+								break;
+							}
+							else
+								Debug_RSP_OK_Packet();
+						}
+							else if(Debug_RSP_Payload_InBuf[0]=='z')
+							{//TODO: check error Code from Remove SoftWare BreakPoint
+									if((*Debug_RSP_Commands_Functions[Debug_RSP_z0])(0,(void *)&Command_opts_znZn) == Debug_BKPT_Remove_AddressError)
+								{
+									Debug_INVALID = "\nCan not Remove or Not Exist breakpoint \n";
+									//Debug_RSP_Put_Packet(Debug_INVALID, 0);
+									Debug_RSP_Error_Packet(Debug_BKPT_Remove_AddressError);
+									break;
+								}
+								else
+									Debug_RSP_OK_Packet();
+							}
+				 }
+				 else
+					Debug_RSP_Error_Packet(err);
 	  	       	 break;
 	  	         default:
 	  	        	Debug_RSP_Unknown_Packet();

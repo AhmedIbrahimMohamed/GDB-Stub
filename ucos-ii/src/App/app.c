@@ -354,6 +354,7 @@ static  void  AppTaskStub (void *p_arg)
 {
     (void)p_arg;
 
+   // asm("BKPT #0");
     CPU_INT08U Stub_State = Stub_Active;
     Debug_Main_Init();
 
@@ -375,9 +376,7 @@ static  void  AppTaskStub (void *p_arg)
 
 //    	OSTimeDlyHMSM(0, 0, 3, 0);
     	Debug_RSP_Get_Packet();                          /* Waits for a packet from host GDB.                                 */
-    	Stub_State =  Debug_RSP_Process_Packet();                     /* process and respond to packet.                                */
-
-
+    	Stub_State =  Debug_RSP_Process_Packet(current_thread_OF_Focus);                     /* process and respond to packet.                                */
     }
 
     /*Stub receives a D/K packet Stub_state is */

@@ -179,13 +179,20 @@ void  OS_CPU_IntHandler (CPU_INT32U  src_id)
              CSP_IntHandlerSrc((CSP_DEV_NBR)int_id);
              break;
        
-        case OS_CPU_ARM_EXCEPT_RST:
-        case OS_CPU_ARM_EXCEPT_UND:
+        case OS_CPU_ARM_EXCEPT_RST: /*How this could get here??*/
         case OS_CPU_ARM_EXCEPT_SWI:
+
+        	break;
+        case OS_CPU_ARM_EXCEPT_UND:
         case OS_CPU_ARM_EXCEPT_ABORT_DATA:
         case OS_CPU_ARM_EXCEPT_ABORT_PREFETCH:
-        case OS_CPU_ARM_EXCEPT_RSVD:        
+#if (OS_USE_GDB)
+
         	Gdb_Handle_Exception((CPU_INT08U)src_id);
+#else
+        	while(1);
+#endif
+        case OS_CPU_ARM_EXCEPT_RSVD:        
         	break;
         default:        
 

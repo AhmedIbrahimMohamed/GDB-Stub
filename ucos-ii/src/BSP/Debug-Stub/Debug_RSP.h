@@ -215,7 +215,8 @@ EXTERN Debug_Block_Message_t Debug_Block_Message;
  * */
 enum {
 	Debug_Exception_BKPT_Hit,
-	Debug_Exception_UNDEFINED_INSTRUCTION
+	Debug_Exception_UNDEFINED_INSTRUCTION,
+	Debug_Exception_MemoryError,
 	//what else can we provide
 
 }Debug_Exception;
@@ -241,7 +242,7 @@ EXTERN void Debug_RSP_Init(void);
 
 
 EXTERN void Debug_RSP_Get_Packet(void);
-EXTERN CPU_INT08U Debug_RSP_Process_Packet(void);
+EXTERN CPU_INT08U Debug_RSP_Process_Packet(Debug_TID_t Thread_of_focus);
 /*TODO::
  * Decide whether following 3 functions would be local or global
  * for now, Following */

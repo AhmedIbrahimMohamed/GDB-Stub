@@ -494,18 +494,14 @@ CPU_INT08U Debug_Main_Step_machine_instruction(Debug_TID_t ThreadID,void *Comman
 	Debug_MemWidth * target_PC;
 	CPU_INT08S Cond_Res;
 
-	/*Read all register of ThreadID for fast access to task context*/
-	Debug_HAL_Regs_Readall(ThreadID);
-
 	if(CommandParam)/*if we have a valid step address in <s>packet, update task PC with it*/
          Debug_HAL_Regs_WriteOne(current_thread_OF_Focus,PC_Offset ,(Debug_RegisterWidth)CommandParam);/*update current thread_PC with passed packet step  address*/
 
-	//Debug_HAL_Regs_ReadOne(current_thread_OF_Focus,PC_Offset ,&current_PC);
+	Debug_HAL_Regs_Readall(ThreadID);
+
 	current_PC = Debug_HAL_RegsBuffer[PC_Offset];
 
-	target_PC = current_PC + 1;  /*initially, next PC is 4 bytes away  from current PC */
-
-	         /*Now, We need to Know the real target  Address of the current PC to know where will put the Breakpoint */
+	/*Now, We need to Know the real target  Address of the current PC to know where will put the Breakpoint */
 
 	/*Step #1 , see if the current instruction would be executed or not, i.e. check its Condition Flag*/
 
@@ -525,7 +521,11 @@ CPU_INT08U Debug_Main_Step_machine_instruction(Debug_TID_t ThreadID,void *Comman
 
 	}
 
+	if(!(target_PC))
+		target_PC = current_PC + 1;  /*initially, next PC is 4 bytes away  from current PC */
+
 	/*Step#3 insert a Temporary breakpoint at real target PC*/
+
 	if (InsertBpInsideBplist(target_PC,BP_StubTemp) != DEBUG_SUCCESS)
 				return DEBUG_BRKPT_ERROR_UnableSET;
 

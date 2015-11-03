@@ -353,13 +353,15 @@ static  void  AppTask2 (void *p_arg)
 static  void  AppTaskStub (void *p_arg)
 {
     (void)p_arg;
-
+CPU_INT08U i ;
    // asm("BKPT #0");
     CPU_INT08U Stub_State = Stub_Active;
     Debug_Main_Init();
 
     // AppPrint("\nStub Task created \n");
-
+CPU_INT32U instructions [9] = {0xE12FFF12,0xE12FFF14, 0xE12FFF1F, 0xe12fff1e ,0xe12fff10,0xe12FFF32, 0xe12FFF34,0xe12FFF3F,0xe12fff33 };
+//for(i=0;i<9;i++)
+	//Get_Target_DP_Class(instructions[i]);
     /*Get the HPT before get further GDB commands to apply commands to it*/
     Debug_RTOS_GET_HPT();
 

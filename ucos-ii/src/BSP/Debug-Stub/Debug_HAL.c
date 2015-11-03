@@ -624,27 +624,61 @@ static Debug_MemWidth Get_Target_DP_Class(CPU_INT32U Instruction)
 
 	CPU_INT32U Rm = Debug_HAL_RegsBuffer[Instruction & Instruction_Rm_BM];
 	/*TODO:: Do we need to check if Rm is PC ,too.. to make a  PC prefetch*/
+
 	CPU_INT32U shifted;
 	Debug_MemWidth Target_address;
-	 /*Get Rn value TODO::Do we need PC prefetch */
+
+	/*Get Rn value TODO::Do we need PC prefetch */
 	CPU_INT32U Rn  =  Debug_HAL_RegsBuffer[(Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP];
 
                  /*Decode different sub-classes inside Data-Processing Class*/
-	/*Combine 3 subclasses in this if-condition*/
+	/*Combine 7 subclasses in this big if-condition*/
 	if( ((Instruction & DP_Registers_BM) == DP_Registers) || ((Instruction & DP_RegShiftedReg_BM) == DP_RegShiftedReg) || ((Instruction & DP_Immediate_BM) == DP_Immediate)  )
 	{
-		/*Continue decoding if target register[12-15] is PC*/
-		if( ( (Instruction & PC_RegSpec2_BM) >> PC_RegSpec2_BP ) == Debug_HAL_INST_PC_ID)
-		{
+		 if((Instruction & DP_MISC_BM) == DP_MISC) /*Extract Miscellaneous instructions as it conflicts with register_shift-register instructions bitmask*/
+			{
+			    if((Instruction & DP_Satu_ADDSUB_BM) == DP_Satu_ADDSUB)/*Extract Saturating addition and subtraction instructions as it conflicts with Miscellaneous bitmask*/
+				   {return 0;}
 
+				switch (Instruction & 0x00600070)/*Mask op and op2 in Miscellaneous subclass*/
+				{
+					case 0x00200010:  //BX
+					case 0x00200030: //BLX(Register)
+						/*TODO:: should we check if Rm is PC*/
+						return Rm;
+						break;
+					case 0x00600060://ERET
+						/*ALthough this instruction should not be in application code but it'll be weakly handled here,*/
+						/*target address is in LR register*/
+						return Debug_HAL_RegsBuffer[LR_Offset];
+						break;
+					case 0x00200070: //BKPT
+						/*Breakpoint causes a Prefetch Abort Exception */
+						return Excep_Vector_Base + Excep_Vector_Prefetch_Offset;
+						break;
+				}
+
+			}
+
+		 if((Instruction & DP_HW_MUL_ACC_BM) == DP_HW_MUL_ACC)/*Extract Halfwordmultiply and multiply accumulate instructions as it conflicts with (registers) instruction bitmask*/
+		 	{return 0;}
+		 if((Instruction & DP_MSR_Immediate_BM) == DP_MSR_Immediate)/*Extract MSR_immediate instructions as it conflic with immediate instructions bitmask*/
+		 	{return 0;}
+
+			/*continue with register/shift-register/immediate instructions*/
+
+		 /*Continue decoding if target register Rd[12-15] is PC*/
+		if( ( (Instruction & Instruction_Rd_BM) >> Instruction_Rd_BP ) == Debug_HAL_INST_PC_ID)
+		{
 			/*if PC is source register Rn*/
 			if ( ((Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP) == Debug_HAL_INST_PC_ID)
 				Rn += 8; /*get PC value at prefetch stage*/
+
 			CPU_INT08U imm5Shift = 0;
 			CPU_INT08U shift_type =  (Instruction & Instruction_ShiftType_BM) >>Instruction_ShiftType_BP ;
 
 			/*tune imm5Shift to correct values in case of logical/arithmetic shift right*/
-			if( (shift_type) == Shift_LSR || ( shift_type )== Shift_ASR)
+			if( (shift_type == Shift_LSR) || ( shift_type == Shift_ASR) )
 			{
 				if ( (Instruction & Instruction_imm5_BM) == 0 )
 					imm5Shift = 32 ;
@@ -659,21 +693,21 @@ static Debug_MemWidth Get_Target_DP_Class(CPU_INT32U Instruction)
 			/*Check instruction Groups
 			 * groups are constructed according to # operands .there are instructions with 3 operands , 2 operands and one operand
 			 * */
+
 			/*Mask Bits[21-24]*/
-			/*1)  3 operands instructions */
+			/*1)  3 operands instructions(Rn,Rm,optional_Imm5) */
 			if( ((Instruction & DP_Registers_XOperands_BM) >> DP_Registers_XOperands_BP) != 0x0D )
 			{
-				/* Except only one instruction  here, take two_operand(Rm,immediate) --> MVN(register)*/
+				/* Exclude only one instruction  here that take two_operand(Rm,immediate) --> MVN(register)*/
                if((Instruction & DP_Registers_XOperands_BM) == DP_Registers_XOperands_BM )
             	   return ~shifted;
-
 
                 // instruction group that take 3 operand (Rn,Rm,optional_Imm5)
             	   /*Exception : TST,CMP Instruction not affecting PC*/
             	   if( (Instruction & DP_Registers_TST_CMP_BM) == 0x01100000 )
             		   return 0;
 
-            	   switch((Instruction & 0x01E00000)>> 21)//check "op" field
+            	   switch((Instruction & 0x01E00000)>> 21)//check "op" field but [21-24]
             	   {
             	      case 0x0://AND
         	    	  return Rn & shifted;
@@ -715,24 +749,22 @@ static Debug_MemWidth Get_Target_DP_Class(CPU_INT32U Instruction)
             	      case 0xC://ORR
 						 return  Rn | shifted ;
 							break;
-            	      case 0xF://BIC
+            	      case 0xE://BIC
 						 return Rn & (~shifted);
 							break;
 
             	   }//switch op in 3-operands instructions
-
-
 
 			} //instruction group with 3-operands
 
 
 			/*Handle instructions with op[21-24] = 1101*/
 
-			/*2) 1-operand instruction group (MOV(rgister,ARM) ,RRX*/
+			/*2) 1-operand instruction group (MOV(rgister,ARM) ,RRX */
 			else if( ( (Instruction & DP_Registers_1_Operands_BM) == 0x01E00000) ||  ( (Instruction & DP_Registers_1_Operands_BM) == 0x1E00060) )
 			{
 				/*special case*/
-				if (Instruction & 0x00000060) //RRX
+				if ((Instruction & 0x00000060) == 0x00000060) //RRX
 				{
 					return Shift_Shift_C(Rm,Shift_RRX,1);
 				}
@@ -746,42 +778,18 @@ static Debug_MemWidth Get_Target_DP_Class(CPU_INT32U Instruction)
 				return shifted;
 			}
 		}//PC is Destination Register
-	}//1st three Sub Class, DP_Registers,DP_RegShiftedReg,DP_Immediate handling
+	}// seven Sub Class handling:: DP_Registers,DP_RegShiftedReg, DP_Immediate, DP_COP_SVC, DP_HW_MUL_ACC, DP_MSR_Immediate_BM, DP_MISC
 
 	else if((Instruction & DP_MUL_ACC_BM) == DP_MUL_ACC)
-	{}
-	else if((Instruction & DP_Satu_ADDSUB_BM) == DP_Satu_ADDSUB)
-	{}
-	else if((Instruction & DP_HW_MUL_ACC_BM) == DP_HW_MUL_ACC)
 	{}
 	else if((Instruction & DP_EXTRA_LDSTR_BM) == DP_EXTRA_LDSTR)
 	{}
 	else if((Instruction & DP_EXTRA_LDSTR_UN_BM) == DP_EXTRA_LDSTR_UN)
-	{}
-	else if((Instruction & DP_SYNC_BM) == DP_SYNC)
-	{}
-	else if((Instruction & DP_MSR_Immediate_BM) == DP_MSR_Immediate)
-	{}
-	else if((Instruction & DP_MISC_BM) == DP_MISC) /*Miscellaneous */
 	{
-		switch (Instruction & 0x00600070)/*Mask op and op2 in Miscellaneous subclass*/
-		{
-			case 0x00200010:  //BX
-			case 0x00200020: //BLX(Register)
-				return Rm;
-				break;
-			case 0x00600060://ERET
-				/*ALthough this instruction should not be in application code but it'll be weakly handled here,*/
-				/*target address is in LR register*/
-				return Debug_HAL_RegsBuffer[LR_Offset];
-				break;
-			case 0x00200070: //BKPT
-				/*Breakpoint causes a Prefetch Abort Exception */
-				return Excep_Vector_Base + Excep_Vector_Prefetch_Offset;
-				break;
-		}
-
+		 if((Instruction & DP_SYNC_BM) == DP_SYNC)
+			{return 0;}
 	}
+
 	else /*Should it be here undefined instruction*/
 		{
 		//TODO:: handle odd cases , just return 0 not BAD instruction
@@ -816,24 +824,23 @@ return 0;
 */
 static Debug_MemWidth Get_Target_LDSTR_Class(CPU_INT32U Instruction)
 {
-	CPU_INT32U Rn = (CPU_INT32U)Debug_HAL_RegsBuffer[(Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP];
+	CPU_INT32U Rn = (Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP;
 	CPU_INT32U * address =0;
 	CPU_INT32U  word =0;
 	CPU_INT32U offset;
 
 
 	/*Continue decoding if  target register Rt[12-15] is the Program counter*/
-	if( ( (Instruction & PC_RegSpec2_BM) >> PC_RegSpec2_BP ) == Debug_HAL_INST_PC_ID)
+	if( ( (Instruction & Instruction_Rt_BM) >> Instruction_Rt_BP ) == Debug_HAL_INST_PC_ID)
 	{
-		if(((Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP) == Debug_HAL_INST_PC_ID)/*in case of LDR/STR(literal)*/
-				Rn += 8;  /*PC at prefetch stage in pipeline*/
-
-		/*here , we handle only "Load/store word and unsigned byte" subclass, Not Media subclass*/
-			if ( ((Instruction & LDSTR_WB_BM) != LDSTR_WB_Media) && (((Instruction & 0x00500000) == 0x00100000) || ((Instruction & 0x00500000) == 0x00500000)))
+		if(Rn == Debug_HAL_INST_PC_ID)/*in case of LDR/STR(literal)*/
+				Rn = Debug_HAL_RegsBuffer[Rn] + 8;  /*PC at prefetch stage in pipeline*/
+		else
+			Rn = Debug_HAL_RegsBuffer[Rn];
+		/*here , we decode only "Load word and unsigned byte" instructions, Excluding  Media-subclass/store instructions*/
+		if ( ((Instruction & LDSTR_WB_BM) != LDSTR_WB_Media) && (((Instruction & 0x00500000) == 0x00100000) || ((Instruction & 0x00500000) == 0x00500000)) )
 			{
-				/* here, we just extract the load instructions in "Load/store word and unsigned byte" subclass
-				 * we are handling only Load instructions that affect PC*/
-				switch (Instruction & 0x02000000) /*Check if it is encoding-A0 or Encoding-A1 --> via A bit [25]*/
+				switch (Instruction & 0x02000000) /*Check if it is encoding-0 or Encoding-1 --> via A bit [25]*/
 				{
 						case LDSTR_WB_Encode_A0:/*using immediate,literal*/
 							offset = (Instruction & Instruction_imm12_BM);
@@ -849,20 +856,20 @@ static Debug_MemWidth Get_Target_LDSTR_Class(CPU_INT32U Instruction)
 
 						default:
 							break;
-						}//switch
+				}//switch
 
 				/*
 				 * Index Bit - P at 24
-				 *               1--> address = Rn
-				 *               else --> address = Rn -/+ immediate
+				 *               0--> address = Rn
+				 *               1 --> address = Rn -/+ immediate
 				 * Add bit - U at 23
 				 *            if 1 --> Rn + immediate
 				 *            else0  --> Rn - immediate*/
 
 				if(Instruction & 0x00800000) /*if U is set*/
-					address = Rn + ( (!(Instruction & 0x01000000))/*if P is cleared, add offset*/ *offset );
+					address = Rn + ( (Instruction & 0x01000000)/*if P is set, add offset*/ *offset );
 				else
-					address = Rn - ( (!(Instruction & 0x01000000)) *offset );
+					address = Rn - ( (Instruction & 0x01000000) *offset );
 
 				/*Check if it is byte-access or word access*/
 
@@ -875,8 +882,8 @@ static Debug_MemWidth Get_Target_LDSTR_Class(CPU_INT32U Instruction)
 				return word;
 				}/*if we are not Media instruction and not store instruction */
 
-			else if((Instruction & LDSTR_WB_BM) == LDSTR_WB_Media) /*if it is Media instruction*/
-				return Get_Target_LDSTR_Media(Instruction);
+		else if((Instruction & LDSTR_WB_BM) == LDSTR_WB_Media) /*if it is Media instruction*/
+			return Get_Target_LDSTR_Media(Instruction);
 	}/*if register is PC*/
 return 0;
 }
@@ -922,22 +929,22 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 
 		return ( Debug_HAL_RegsBuffer[PC_Offset] & 0xFFFFFFF6 ) + 8/*for prefetch stage */ + offset ;
 	}
-	else
-	{
-		/*LDMxx/POP*/
+		/*LDMxx/POP/STMxx/PUSH*/
 
 		/*
 		 * Extract load/pop instructions via bit [20]
+		 * bit[20] = 0 Store/Push
+		 * bit[20] = 1  Load/Pop
 		 * */
-		if( (Instruction & PC_RegList_BM) && (Instruction & 0x00100000))/*Is PC in Reg_List and we are in Load/POP not store/push*/
+		if( (Instruction & PC_RegList_BM) && (Instruction & 0x00100000))/*Is PC in Reg_List and we are in Load/POP not store/push, this excludes LDM(user register) too*/
 		{
 
 			CPU_INT32U Rn = Debug_HAL_RegsBuffer[(Instruction &Instruction_Rn_BM) >> Instruction_Rn_BP];
 
-			if(((Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP) == Debug_HAL_INST_PC_ID)/*in case of LDR/STR(literal)*/
+			if(((Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP) == Debug_HAL_INST_PC_ID)/*in case of LDR(literal)*/
 						Rn += 8;  /*PC at prefetch stage in pipeline*/
 
-			/*Calculate how many register are to be loaded*/
+			/*Calculate how many register are to be loaded including PC*/
 			CPU_INT08U regs_Number_loaded = Count_NumRegsLoaded((CPU_INT16U)(Instruction & 0x0000FFFF));
 
 			CPU_INT32U *address ;
@@ -959,12 +966,9 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 				}
 			return (*address);
 
-		}//if it is load/pop
-
-	}//Load/Store-multiple
+		}//if it is load/pop and PC is in reglist
 
 	return 0;
-
 }
 
 /*
@@ -996,6 +1000,9 @@ static Debug_MemWidth Get_Target_COPSVC_Class(CPU_INT32U Instruction)
 	{
 		return Excep_Vector_Base + Excep_Vector_SVC_Offset ;/*SVC entry address in Vector table*/
 	}
+
+	else if ((Instruction & Debug_HAL_COP_SVC_UNDEFINED_BM) == Debug_HAL_COP_SVC_UNDEFINED)
+	{/*TODO:: Deal with Explicit undefined instruction*/ }
 	return 0;
 }
 
@@ -1023,26 +1030,22 @@ static Debug_MemWidth Get_Target_COPSVC_Class(CPU_INT32U Instruction)
 static Debug_MemWidth Get_Target_LDSTR_Media(CPU_INT32U Instruction)
 {
 
-	switch (Instruction & LDSTR_WB_Media_ParallelAddSub_BM)
+	switch( (Instruction & LDSTR_WB_Media_SubClasses_BM) >> LDSTR_WB_Media_SubClasses_BP)
 	{
-	 	 case LDSTR_WB_Media_ParallelAddSub_Sign:
-	 		 break;
-	 	 case LDSTR_WB_Media_ParallelAddSub_Unsign:
-	 		 break;
 
-	 	 default:/*TODO::Should it be undefined instruction*/
-	 		 break;
-	}
-
-	switch (Instruction & LDSTR_WB_Media_PackUn_Sat_Rev_MUL_DIV_BM)
-	{
-		case LDSTR_WB_Media_PackUn_Sat_Rev:
+		case 0x00:/*Parallel addition and subtraction, signed/unsigned*/
+			if(Instruction & 0x00400000)/*Parallel addition and subtraction, unsigned*/
+			{}
+			else/*Parallel addition and subtraction, signed*/
+			{}
 			break;
-		case LDSTR_WB_Media_MUL_DIV:
+		case 0x01:/*Packing, unpacking, saturation, and reversal*/
 			break;
-		default: /*TODO:: should it be undefined instruction*/
+		case 0x02:/*Signed multiply, signed and unsigned divide*/
 			break;
-
+		default:
+			/*TODO:: should it be undefined instruction*/
+			break;
 	}
 return 0;
 }

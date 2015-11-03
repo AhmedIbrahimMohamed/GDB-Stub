@@ -88,7 +88,7 @@
 #define DP_MUL_ACC                     0x00000090
 
 #define DP_Satu_ADDSUB_BM              0x0F9000F0
-#define DP_Satu_ADDSUB                 0x10000050
+#define DP_Satu_ADDSUB                 0x01000050
 
 
 
@@ -104,7 +104,7 @@
 #define DP_SYNC_BM                     0x0F0000F0
 #define DP_SYNC                        0x01000090
 
-#define DP_MSR_Immediate_BM            0x0FB00010
+#define DP_MSR_Immediate_BM            0x0FB00000
 #define DP_MSR_Immediate               0x03200000
 
 #define DP_MISC_BM                     0x0F900080
@@ -120,6 +120,8 @@
 
 /*Media subclasses*/
 //TODO::page : 210 to 213
+#define LDSTR_WB_Media_SubClasses_BM                    0x01800000
+#define LDSTR_WB_Media_SubClasses_BP					23
 #define LDSTR_WB_Media_ParallelAddSub_BM                0x0FC000010
 #define LDSTR_WB_Media_ParallelAddSub_Sign              0x060000010
 #define LDSTR_WB_Media_ParallelAddSub_Unsign            0x064000010
@@ -133,7 +135,11 @@
 /*3- Branch and Block Data Transfer class has no subclass */
 
 /*4- Coprocessor/SVC class has no subclass*/
+#define Debug_HAL_COP_SVC_UNDEFINED_BM    0x0FE00000
+#define Debug_HAL_COP_SVC_UNDEFINED       0x0C000000
 
+#define Debug_HAL_COP_SVC_SVC_BM          0x03000000
+#define Debug_HAL_COP_SVC_SVC             0x03000000
 /*Instruction's target address and PC position in instruction */
 #define PC_RegList_BM   0x00008000        //[15]
 #define PC_RegSpec1_BM  0x00000F00        //[8-11]
@@ -142,10 +148,14 @@
 #define PC_RegSpec3_BM  0x000F0000        //[16-19]
 #define Debug_HAL_INST_PC_ID   0xF
 
+
 /*other instruction fields Bitmasks*/
 #define Instruction_Rm_BM   0x0000000F
 #define Instruction_Rn_BM   0x000F0000
 #define Instruction_Rn_BP   16
+
+#define Instruction_Rd_BM   0x0000F000  //[12-15]
+#define Instruction_Rd_BP   12
 
 #define Instruction_Rt_BM   0x0000F000
 #define Instruction_Rt_BP   12
@@ -177,7 +187,7 @@
 #define DP_Registers_XOperands_BM         0x01E00000
 #define DP_Registers_XOperands_BP         21
 
-#define DP_Registers_1_Operands_BM       0x01E00F80
+#define DP_Registers_1_Operands_BM       0x01E00FE0
 
 
 #define DP_Registers_TST_CMP_BM         0x01900000
@@ -312,7 +322,6 @@ EXTERN CPU_INT32U BreakPointMemWrite(void * srcAddress,void  * desAddress,unsign
 EXTERN CPU_INT08U Deactivate_SW_BreakPoints();
 EXTERN CPU_INT32U Gdb_Arch_Remove_BreakPoint(unsigned long bPAddress,char * savedInst);
 EXTERN Debug_MemWidth Debug_HAL_INST_Get_Target_UNCOND_Class(Debug_MemWidth Instruction);
-
 /*
 *********************************************************************************************************
 *                                          CONFIGURATION ERRORS

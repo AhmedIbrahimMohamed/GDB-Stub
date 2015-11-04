@@ -936,7 +936,7 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 		 * bit[20] = 0 Store/Push
 		 * bit[20] = 1  Load/Pop
 		 * */
-		if( (Instruction & PC_RegList_BM) && (Instruction & 0x00100000))/*Is PC in Reg_List and we are in Load/POP not store/push, this excludes LDM(user register) too*/
+	if( (Instruction & PC_RegList_BM) && (Instruction & 0x00100000))/*Is PC in Reg_List and we are in Load/POP not store/push, this excludes LDM(user register) too*/
 		{
 
 			CPU_INT32U Rn = Debug_HAL_RegsBuffer[(Instruction &Instruction_Rn_BM) >> Instruction_Rn_BP];
@@ -950,18 +950,22 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 			CPU_INT32U *address ;
 
 			/*Do we increment or decrement*/
+			//if((Instruction & 0x00C00000) == 0x00800000)/*increment*/
 			if((Instruction & 0x02C00000) == 0x00800000) /*Increment*/
 			{
 				address = Rn + (4*regs_Number_loaded) - (4*( (Instruction & 0x03400000) == 0x00000000));/*subtract 4 if increment after*/
+				/*(!(Instruction & 0x01000000)) subtract 4 if increment after*/
 			}
+			//if((Instruction & 0x00C00000) == 0x00000000)/*Decrement*/
 			else if((Instruction & 0x02C00000) == 0x00000000)/*Decrement*/
 			{
 				address = Rn - (4* ((Instruction & 0x03400000) == 0x01000000) );/*subtract 4 if decrement before*/
+				/*(Instruction & 0x01000000) subtract 4 if decrement before*/
 			}
 	        else /*LDM(Exception Return)*/
 				{
-	        	  address = Rn - (4*regs_Number_loaded *(!(Instruction & 0x00800000)) ) /*subrtract if U-bit[23] is cleared*/
-	        	      + (4*((Instruction & 0x00800000) ==(Instruction & 0x01000000))) ; /*add 4 if P-bit==U-bit*/
+	        	  address = Rn - (4*regs_Number_loaded *(!(Instruction & 0x00800000)) ) /*subtract if U-bit[23] is cleared*/
+	        	      + (4*((Instruction & 0x00800000) ==(Instruction & 0x01000000))) ; /*add 4 if P-bit[24]==U-bit*/
 
 				}
 			return (*address);

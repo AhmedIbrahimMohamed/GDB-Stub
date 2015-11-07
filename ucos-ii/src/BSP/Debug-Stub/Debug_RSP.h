@@ -71,7 +71,7 @@
 #define Debug_RSP_IN_OUTBUFMax			400                  /*Maximum length of payload Buffer
                                                                  400 Hex chars = 200 bytes = 50 words*/
 
-#define Debug_NoCheckSumCheck           0
+#define Debug_NoCheckSumCheck           1
 
 /*
 *********************************************************************************************************
@@ -214,7 +214,8 @@ EXTERN Debug_Block_Message_t Debug_Block_Message;
  * This enumerates Sources of Exception that Stub-Handler trigger whenever an Exception occurs
  * */
 enum {
-	Debug_Exception_BKPT_Hit,
+	Debug_Exception_StubBKPT_Hit,
+	Debug_Exception_UserBKPT_Hit,
 	Debug_Exception_UNDEFINED_INSTRUCTION,
 	Debug_Exception_MemoryError,
 	//what else can we provide

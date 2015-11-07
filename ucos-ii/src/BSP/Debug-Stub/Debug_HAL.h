@@ -229,6 +229,17 @@ EXTERN Debug_MemWidth      Debug_HAL_MemoryBuffer[Debug_HAL_MEMWORDMAX]
                         = {0}
 #endif
 ;
+#if GDB_HAVE_SWBP
+EXTERN struct Gdb_Bkpt		Gdb_BreakList[GDB_MAX_BREAKPOINTS]
+#ifdef Debug_HAL_IMPORT
+
+
+         = {
+    [0 ... GDB_MAX_BREAKPOINTS-1] = { .state = BP_UNDEFINED }
+}
+#endif
+;
+#endif
 
 /*Signals numbering as defined by GDB source code in <GDB-SourceTree>/include/gdb/gdb.def*/
 enum {
@@ -322,6 +333,8 @@ EXTERN CPU_INT32U BreakPointMemWrite(void * srcAddress,void  * desAddress,unsign
 EXTERN CPU_INT08U Deactivate_SW_BreakPoints();
 EXTERN CPU_INT32U Gdb_Arch_Remove_BreakPoint(unsigned long bPAddress,char * savedInst);
 EXTERN Debug_MemWidth Debug_HAL_INST_Get_Target_UNCOND_Class(Debug_MemWidth Instruction);
+EXTERN CPU_INT08U Debug_HAL_GetBkPTID_ByAddress(CPU_INT32S BKPT_address);
+
 /*
 *********************************************************************************************************
 *                                          CONFIGURATION ERRORS

@@ -14,11 +14,6 @@ struct Gdb_Bkpt {
     enum BpState	state;
     enum BpLifeTime lifetime;
 };
-#if GDB_HAVE_SWBP
-static struct Gdb_Bkpt		Gdb_BreakList[GDB_MAX_BREAKPOINTS] = {
-    [0 ... GDB_MAX_BREAKPOINTS-1] = { .state = BP_UNDEFINED }
-};
-#endif
 /**
  * struct gdb_arch - Describe architecture specific values.
  * @gdb_bpt_instr: The instruction to trigger a breakpoint.

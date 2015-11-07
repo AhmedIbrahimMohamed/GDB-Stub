@@ -209,7 +209,7 @@ void Debug_RSP_Init(void)
 	RSP_Packet.CheckSum = 0;
 	RSP_Packet.Payload_ptr = Debug_RSP_Payload_InBuf;
 
-	Debug_Block_Message = Debug_Exception_BKPT_Hit;
+	Debug_Block_Message = Debug_Exception_UserBKPT_Hit;
  }
 /*
 *********************************************************************************************************
@@ -606,15 +606,14 @@ do{
 	  	         case 's': /* sAA..AA    step form address AA..AA (optional) */
 
 	  	        	 /* 1- get  an address to step from if GDB sent*/
-	  	        	if(Debug_Hex2Word(&Cmd_Param_start,&Resume_Address))
+	  	        	if(!Debug_Hex2Word(&Cmd_Param_start,&Resume_Address))//if no address is specified in <s> packet
 	  	        	{
-						/*2-  Insert breakpoint at next executed instruction address */
+	  	        		/*2-  Insert breakpoint at next executed instruction address */
 						err = (*Debug_RSP_Commands_Functions[Debug_RSP_s])(Thread_of_focus,(void *)Resume_Address);
 						if (err == DEBUG_SUCCESS || err == DEBUG_Bad_Instruction )
-
 						{
 							/*3- activate all SW breakpoints to be hit when resumed*/
-							Activate_Sw_BreakPoints();
+							//Activate_Sw_BreakPoints();
 
 							/*4- Pend Stub Task so that program resumes */
 							stub_message = (*Debug_Stub_PendPtr)();
@@ -636,15 +635,13 @@ do{
 							 * 1- resume without breakpoint??
 							 * 2- would we send Error Packet to gdb, no it is not in standard
 							 * 3- send console packet with error to user and resume*/
-
-
 						}
-	  	        	}//if command parameters parsed correctly
-	  	        	else{
-	  	        		Debug_INVALID = "\nINVALID Syntax or INVALID Hex Characters in <s> command packet ID\n";
-						//Debug_RSP_Put_Packet(Debug_INVALID, 0);
-						Debug_RSP_Error_Packet(DEBUG_Bad_COMMAND_ARGS);
-	  	        	}
+
+	 	        	}//if GDB wants to step from current address
+
+	  	        	else{//step from  address
+
+	  	        	}//if GDB need to step from  address
 
 	  	        	 break;
 	  	         case 'c': /* cAA..AA    Continue at address AA..AA (optional) */
@@ -656,13 +653,6 @@ do{
 
 					/*pend on exception occurance */
 					/*Pending mechanism*/
-					stub_message = (*Debug_Stub_PendPtr)();
-
-					/*Examine the sent message from an Exception/Debug Event after stub wakes up*/
-					/*1- activate all SW breakpoints to be hit when resumed*/
-					Activate_Sw_BreakPoints();
-
-					/*2- Pend Stub Task so that program resumes */
 					stub_message = (*Debug_Stub_PendPtr)();
 
 					/*Here , Stub resume with the appropriate Exception Signal,
@@ -1249,7 +1239,7 @@ static CPU_INT08U IsBreakPointValid(CPU_INT08U * ptr,Debug_MemWidth * bPAddress,
 	 	     }
 	  *bPAddress=Address;
 	  *bPLength=Length;
-	  *bPType=*BPType;
+	  *bPType=*BPType - 48;
 	  return DEBUG_SUCCESS;
 
 }

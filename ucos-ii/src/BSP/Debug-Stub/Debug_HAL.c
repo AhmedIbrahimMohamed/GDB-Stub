@@ -1239,6 +1239,7 @@ static CPU_INT08U Count_NumRegsLoaded( CPU_INT16U CPU_RegList)
 	    for (i = 0; i < GDB_MAX_BREAKPOINTS; i++) {
 	        if ((Gdb_BreakList[i].state == BP_SET) &&
 	                (Gdb_BreakList[i].bpt_addr == (*bPAddress)))
+	        	/*how you save the instruction instead of passed address itself*/
 	            return -1;
 	    }
 	    for (i = 0; i < GDB_MAX_BREAKPOINTS; i++) {
@@ -1263,6 +1264,8 @@ static CPU_INT08U Count_NumRegsLoaded( CPU_INT16U CPU_RegList)
 	    Gdb_BreakList[breakno].type = BP_BREAKPOINT;
 	    Gdb_BreakList[breakno].bpt_addr = (*bPAddress);
 	    Gdb_BreakList[breakno].lifetime = lifetime;
+		Activate_Sw_BreakPoints();
+
 	return DEBUG_SUCCESS;
 }
 
@@ -1290,7 +1293,7 @@ CPU_INT32U Gdb_Arch_Remove_BreakPoint(unsigned long bPAddress,char * savedInst)
 	//BreakPointMemWrite()
 	int err;
 
-	    err = BreakPointMemWrite((void *)bPAddress, (void *)savedInst, BREAK_INSTR_SIZE);
+	    err = BreakPointMemWrite((void *)savedInst,(void *)bPAddress, BREAK_INSTR_SIZE);
 		if (err)
 			return err;
 
@@ -1325,16 +1328,22 @@ CPU_INT08U Deactivate_SW_BreakPoints()
 	        if (Gdb_BreakList[i].state != BP_ACTIVE)
 	            continue;
 	        addr = Gdb_BreakList[i].bpt_addr;
-	        error = Gdb_Arch_Remove_BreakPoint(addr,(char *)(Gdb_BreakList[i].saved_instr));
-	        if (error)
-	            return error;
 
 	        extern void Xil_ICacheInvalidateLine(unsigned int adr);
 	       	        Xil_ICacheInvalidateLine(addr);
-	        if(Gdb_BreakList[i].lifetime == BP_UserPermenant)
-	       	        Gdb_BreakList[i].state = BP_SET;
-	        else
-       	        Gdb_BreakList[i].state = BP_REMOVED;
+	        if(Gdb_BreakList[i].lifetime == BP_StubTemp)
+	        {
+	        	Gdb_BreakList[i].state = BP_REMOVED;
+	            error = Gdb_Arch_Remove_BreakPoint(addr,(char *)(Gdb_BreakList[i].saved_instr));
+	     	        if (error)
+	     	            return error;
+
+	        }
+
+
+
+
+
 	    }
 	return 0;
 }
@@ -1441,4 +1450,26 @@ CPU_INT32U Activate_Sw_BreakPoints()
 	    return 0;
 	/*Debug_RSP_Info_mM Command_opts_mM;
 	Debug_Main_Write_memory()*/
+}
+
+/*
+ *********************************************************************************************************
+ *                                               Debug_HAL_GetBkPTID_ByAddress()
+ *
+ * Description : Return abreakpoint point index in breakpoint list given its address
+ *
+ * Argument(s) : BKPT_address : Breakpoint address at which it returns its index
+ *
+ * Return(s)   : BkPT Index
+ *
+ * Caller(s)   :Gdb_Handle_Exception()
+ *
+ * Note(s)     : (1)
+ *
+ *               (2)
+ *********************************************************************************************************
+ */
+CPU_INT08U Debug_HAL_GetBkPTID_ByAddress(CPU_INT32S BKPT_address)
+{
+	return 0;
 }

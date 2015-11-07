@@ -491,7 +491,7 @@ CPU_INT08U Debug_Main_Write_memory(Debug_TID_t ThreadID,void *CommandParam)
 CPU_INT08U Debug_Main_Step_machine_instruction(Debug_TID_t ThreadID,void *CommandParam)
 {
 	Debug_MemWidth * current_PC;
-	Debug_MemWidth * target_PC;
+	Debug_MemWidth  target_PC;
 	CPU_INT08S Cond_Res;
 
 	if(CommandParam)/*if we have a valid step address in <s>packet, update task PC with it*/
@@ -526,7 +526,7 @@ CPU_INT08U Debug_Main_Step_machine_instruction(Debug_TID_t ThreadID,void *Comman
 
 	/*Step#3 insert a Temporary breakpoint at real target PC*/
 
-	if (InsertBpInsideBplist(target_PC,BP_StubTemp) != DEBUG_SUCCESS)
+	if (InsertBpInsideBplist(&target_PC,BP_StubTemp) != DEBUG_SUCCESS)
 				return DEBUG_BRKPT_ERROR_UnableSET;
 
 	return DEBUG_SUCCESS;
@@ -560,7 +560,7 @@ CPU_INT08U Debug_Main_Resume( Debug_TID_t ThreadID,void *CommandParam)
 	if(CommandParam)/*if we have a valid resume address in <c>packet, update task PC with it*/
          Debug_HAL_Regs_WriteOne(current_thread_OF_Focus,PC_Offset ,(Debug_RegisterWidth)CommandParam);/*update current thread_PC with passed packet step  address*/
 
-  	Activate_Sw_BreakPoints();
+  //	Activate_Sw_BreakPoints();
 
 	return DEBUG_SUCCESS;
 
@@ -633,9 +633,17 @@ CPU_INT08U Debug_Main_RemoveBreakPoint( Debug_TID_t ThreadID,void *CommandParam)
 		if(BP_options->Kind==BP_BREAKPOINT)// SoftWare BreakPoint
 		{
 			for (i = 0; i < GDB_MAX_BREAKPOINTS; i++) {
-				if ((Gdb_BreakList[i].state == BP_SET) &&
-						(Gdb_BreakList[i].bpt_addr == BP_options->BkptAddress)) {
+				if ((Gdb_BreakList[i].state == BP_ACTIVE) &&
+						(Gdb_BreakList[i].bpt_addr == *(BP_options->BkptAddress))) {
 					Gdb_BreakList[i].state = BP_REMOVED;
+					Debug_addr_t addr = *(BP_options->BkptAddress);
+
+						        extern void Xil_ICacheInvalidateLine(unsigned int adr);
+						       	        Xil_ICacheInvalidateLine(addr);
+						            int error = Gdb_Arch_Remove_BreakPoint(addr,(char *)(Gdb_BreakList[i].saved_instr));
+						     	        if (error)
+						     	            return error;
+
 					return DEBUG_SUCCESS;
 				}
 			}
@@ -689,6 +697,7 @@ void Gdb_Handle_Exception(CPU_INT08U Exception_ID)
 	current_thread_OF_Focus = OSPrioHighRdy;
 	/*read all registers for the interrupted thread/tasks for fast access to its context*/
 	Debug_HAL_Regs_Readall(current_thread_OF_Focus);
+	CPU_INT32U *PC = Debug_HAL_RegsBuffer[PC_Offset];
 	//TODO::handle exceptions To signal mapping
 	switch (Exception_ID)
 
@@ -704,10 +713,19 @@ void Gdb_Handle_Exception(CPU_INT08U Exception_ID)
 	      break;
 
 	      case OS_CPU_ARM_EXCEPT_ABORT_PREFETCH:
-	        	if(Debug_HAL_RegsBuffer[PC_Offset] == 0xE1200070/**/ )/*if prefetch abort is due to BKPT debug-event*/
+	        	if( *PC == 0xE1200070/**/ )/*if prefetch abort is due to BKPT debug-event*/
 	        	{
-	        		Command_opts_HaltSig.Signum = SIGTRAP;
-	        	    Debug_Block_Message = Debug_Exception_BKPT_Hit;
+	        		/*check if it is stub bkpt or user bkpt*/
+	        		/*make functoin to get the breakpoint struct with given address*/
+	        		/*CPU_INT08U BKPT_ndex = Debug_HAL_GetBkPTID_ByAddress(Debug_HAL_RegsBuffer[PC_Offset]);
+	        		if(Gdb_BreakList[BKPT_ndex].lifetime  == BP_StubTemp)
+	        			Debug_Block_Message = Debug_Exception_StubBKPT_Hit;
+	        		else
+	        		{*/
+	        			Command_opts_HaltSig.Signum = SIGTRAP;
+	        			Debug_Block_Message = Debug_Exception_UserBKPT_Hit;
+	        		//}
+
 	        	}
 	        else /*It is program prefetch abort*/
 	        	{
@@ -717,7 +735,9 @@ void Gdb_Handle_Exception(CPU_INT08U Exception_ID)
 	       break;
 
 	}
-	Debug_RTOS_StubPost((void *)&Debug_Block_Message);
 	Deactivate_SW_BreakPoints();//de-activate user BKPTs  and remove Stub bKPT
+	Debug_RTOS_StubPost((void *)&Debug_Block_Message);
 
 }
+
+

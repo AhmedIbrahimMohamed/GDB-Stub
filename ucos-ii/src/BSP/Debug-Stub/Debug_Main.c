@@ -593,7 +593,7 @@ CPU_INT08U Debug_Main_InsertBreakPoint( Debug_TID_t ThreadID,void *CommandParam)
 			// InsertBpInsideBplist
 		int error = 0;
 		Debug_RSP_Info_znZn * BP_options=(Debug_RSP_Info_znZn *)CommandParam;
-		error = InsertBpInsideBplist(BP_options->BkptAddress,BP_UserPermenant);
+		error = InsertBpInsideBplist(BP_options->BkptAddress, BP_UserPermenant);
 		//ToDO: check Error.
 		if (error != DEBUG_SUCCESS)
 			return DEBUG_BRKPT_ERROR_UnableSET;
@@ -638,11 +638,11 @@ CPU_INT08U Debug_Main_RemoveBreakPoint( Debug_TID_t ThreadID,void *CommandParam)
 					Gdb_BreakList[i].state = BP_REMOVED;
 					Debug_addr_t addr = *(BP_options->BkptAddress);
 
-						        extern void Xil_ICacheInvalidateLine(unsigned int adr);
-						       	        Xil_ICacheInvalidateLine(addr);
-						            int error = Gdb_Arch_Remove_BreakPoint(addr,(char *)(Gdb_BreakList[i].saved_instr));
-						     	        if (error)
-						     	            return error;
+					extern void Xil_ICacheInvalidateLine(unsigned int adr);/*Get fresh value at instruction address*/
+					Xil_ICacheInvalidateLine(addr);
+					CPU_INT08U error = Gdb_Arch_Remove_BreakPoint(addr,(char *)(Gdb_BreakList[i].saved_instr));
+					if (error)
+						return error;
 
 					return DEBUG_SUCCESS;
 				}
@@ -735,7 +735,20 @@ void Gdb_Handle_Exception(CPU_INT08U Exception_ID)
 	       break;
 
 	}
-	Deactivate_SW_BreakPoints();//de-activate user BKPTs  and remove Stub bKPT
+	//Deactivate_SW_BreakPoints();//remove Stub Breakpoint/*commented by nehal*/
+	CPU_INT08U BKPT_INDEX;
+	for (BKPT_INDEX = 0; BKPT_INDEX < GDB_MAX_BREAKPOINTS; BKPT_INDEX++) {
+		        if (Gdb_BreakList[BKPT_INDEX].state != BP_ACTIVE)
+		            continue;
+		        if(Gdb_BreakList[BKPT_INDEX].lifetime == BP_StubTemp)
+		        {
+		        	 extern void Xil_ICacheInvalidateLine(unsigned int adr);
+					 Xil_ICacheInvalidateLine(Gdb_BreakList[BKPT_INDEX].bpt_addr);
+
+		        	Gdb_BreakList[BKPT_INDEX].state = BP_REMOVED;
+		            Gdb_Arch_Remove_BreakPoint(Gdb_BreakList[BKPT_INDEX].bpt_addr,(char *)(Gdb_BreakList[BKPT_INDEX].saved_instr));
+		        }
+		    }
 	Debug_RTOS_StubPost((void *)&Debug_Block_Message);
 
 }

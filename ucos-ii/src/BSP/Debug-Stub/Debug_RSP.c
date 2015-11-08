@@ -1226,7 +1226,7 @@ static CPU_INT08U IsBreakPointValid(CPU_INT08U * ptr,Debug_MemWidth * bPAddress,
 	CPU_INT32U Length;
 
 	  if (*(BPData++) != ',') {
-		  Debug_RSP_Error_Packet(DEBUG_Bad_COMMAND_ARGS);//Bad Command Args
+		 // Debug_RSP_Error_Packet(DEBUG_Bad_COMMAND_ARGS);//Bad Command Args
 					return DEBUG_Bad_COMMAND_ARGS;
 		 }
 	  if (!Debug_Hex2Word(&BPData, &Address)) {
@@ -1234,7 +1234,7 @@ static CPU_INT08U IsBreakPointValid(CPU_INT08U * ptr,Debug_MemWidth * bPAddress,
 	         return DEBUG_Bad_COMMAND_ARGS_Address;
 	     }
 	  if (*(BPData++) != ','||!Debug_Hex2Word(&BPData, &Length)) {
-		  Debug_RSP_Error_Packet(DEBUG_Bad_COMMAND_ARGS);
+		 // Debug_RSP_Error_Packet(DEBUG_Bad_COMMAND_ARGS);
 	 	         return DEBUG_Bad_COMMAND_ARGS_Address;
 	 	     }
 	  *bPAddress=Address;

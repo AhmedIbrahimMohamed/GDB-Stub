@@ -1233,11 +1233,12 @@ static CPU_INT08U Count_NumRegsLoaded( CPU_INT16U CPU_RegList)
 
  CPU_INT32S InsertBpInsideBplist(Debug_MemWidth *bPAddress,enum BpLifeTime lifetime)
 {
-	int breakno = -1;
+	CPU_INT08S breakno = -1;
+	CPU_INT08U Err;
 	    int i;
 
-	    for (i = 0; i < GDB_MAX_BREAKPOINTS; i++) {
-	        if ((Gdb_BreakList[i].state == BP_SET) &&
+	    for (i = 0; i < GDB_MAX_BREAKPOINTS; i++) { //this can be eliminated as GDB ensure non-replicated insertion
+	        if ((Gdb_BreakList[i].state == BP_ACTIVE) &&
 	                (Gdb_BreakList[i].bpt_addr == (*bPAddress)))
 	        	/*how you save the instruction instead of passed address itself*/
 	            return -1;
@@ -1248,8 +1249,7 @@ static CPU_INT08U Count_NumRegsLoaded( CPU_INT16U CPU_RegList)
 	            break;
 	        }
 	    }
-
-	    if (breakno == -1) {
+/*	    if (breakno == -1) {//Commented by nehal
 	        for (i = 0; i < GDB_MAX_BREAKPOINTS; i++) {
 	            if (Gdb_BreakList[i].state == BP_UNDEFINED) {
 	                breakno = i;
@@ -1257,14 +1257,24 @@ static CPU_INT08U Count_NumRegsLoaded( CPU_INT16U CPU_RegList)
 	            }
 	        }
 	    }
+	*/
 	    if (breakno == -1)
-	           return -1;
+	           return -1; /*No Free ROOM Found*/
 
-	    Gdb_BreakList[breakno].state = BP_SET;
+	   // Gdb_BreakList[breakno].state = BP_SET;/*Commented by nehal, as we support only ACTIVE and REMOVED*/
 	    Gdb_BreakList[breakno].type = BP_BREAKPOINT;
 	    Gdb_BreakList[breakno].bpt_addr = (*bPAddress);
-	    Gdb_BreakList[breakno].lifetime = lifetime;
-		Activate_Sw_BreakPoints();
+	   Gdb_BreakList[breakno].lifetime = lifetime;
+		//Activate_Sw_BreakPoints();/*Commented by nehal, as this call would make unnecessary working for checking the SET breakpoint which not hold neither for USER nor stub all user breakpoint*/
+	    /*added by nehal*/
+		if((Err = Gdb_Arch_Set_BreakPoint(Gdb_BreakList[breakno].bpt_addr,
+			                (char *)(Gdb_BreakList[breakno].saved_instr))) != 0)//
+			            return Err;
+			        //TODO: invalidateIcash instrucrtion cache after writing breakpoint instruction
+			        extern void Xil_ICacheInvalidateLine(unsigned int adr);
+			        Gdb_BreakList[i].state = BP_ACTIVE;
+			        Xil_ICacheInvalidateLine(Gdb_BreakList[breakno].bpt_addr);
+	    /*End added by nehal*/
 
 	return DEBUG_SUCCESS;
 }
@@ -1327,22 +1337,18 @@ CPU_INT08U Deactivate_SW_BreakPoints()
 	    for (i = 0; i < GDB_MAX_BREAKPOINTS; i++) {
 	        if (Gdb_BreakList[i].state != BP_ACTIVE)
 	            continue;
-	        addr = Gdb_BreakList[i].bpt_addr;
-
-	        extern void Xil_ICacheInvalidateLine(unsigned int adr);
-	       	        Xil_ICacheInvalidateLine(addr);
 	        if(Gdb_BreakList[i].lifetime == BP_StubTemp)
 	        {
+	        	 addr = Gdb_BreakList[i].bpt_addr;
+	        	 extern void Xil_ICacheInvalidateLine(unsigned int adr);
+				 Xil_ICacheInvalidateLine(addr);
+
 	        	Gdb_BreakList[i].state = BP_REMOVED;
 	            error = Gdb_Arch_Remove_BreakPoint(addr,(char *)(Gdb_BreakList[i].saved_instr));
 	     	        if (error)
 	     	            return error;
 
 	        }
-
-
-
-
 
 	    }
 	return 0;
@@ -1444,8 +1450,8 @@ CPU_INT32U Activate_Sw_BreakPoints()
 	            return error;
 	        //TODO: invalidateIcash first
 	        extern void Xil_ICacheInvalidateLine(unsigned int adr);
-	        Xil_ICacheInvalidateLine(addr);
 	        Gdb_BreakList[i].state = BP_ACTIVE;
+	        Xil_ICacheInvalidateLine(addr);
 	    }
 	    return 0;
 	/*Debug_RSP_Info_mM Command_opts_mM;

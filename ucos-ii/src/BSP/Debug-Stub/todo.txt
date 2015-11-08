@@ -68,3 +68,34 @@ New TODO-list:
 	4- incrementing PC as pointer
 	   - RT-thread insrement pointer by 1 to get next ARM-instruction
 	       and increment an integer by 4  to get next ARM-instruction
+	       
+	       
+========================================
+
+New TODO list : 7/11/2015
+--------------
+1- discuss bitmasks
+2- discuss 2 functions -->ok
+	2-1-Deactivate Sw breakpoint
+	2-2- activate SW breakpoint 
+	now, we do not have the concept of activate and deactivate of breakpoints , it is either Removed or Active
+	we need to eliminate 
+	1- these function and spread their code where we need , specifically in stub breakpoint handling-->ok
+	2- eliminate the code to support only 2 state of breakpoint (REMOVED,ACTIVE)-->ok
+	-REMOVED for break boint deletion and as initial value forBKPT state
+	-ACTIVE after BKPT insertion 
+	3- eliminate lifetime parameter-->ok
+3- dicuss why 
+  -- you call  Xil_ICacheInvalidateLine(unsigned int adr) before Gdb_Arch_Remove_BreakPoint()
+3- ahmed revise 
+his functions and comment them
+revise data types of functions' variables and return values and checking  on return values
+4- correct behaviour in -->ok
+Debug_Main_Step_machine_instruction () -->InsertBpInsideBplist(stub)  -->Activate_Sw_BreakPoints()----> ok 
+this activate all breakbpoints and make them active including user breakpoint although it should only activate stub breakpoint
+This would be resolved when do step 2 	
+
+
+--------------- 
+	
+	

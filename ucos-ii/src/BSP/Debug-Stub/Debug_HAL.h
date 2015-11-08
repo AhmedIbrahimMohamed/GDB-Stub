@@ -235,7 +235,7 @@ EXTERN struct Gdb_Bkpt		Gdb_BreakList[GDB_MAX_BREAKPOINTS]
 
 
          = {
-    [0 ... GDB_MAX_BREAKPOINTS-1] = { .state = BP_UNDEFINED }
+    [0 ... GDB_MAX_BREAKPOINTS-1] = { .state = BP_REMOVED }
 }
 #endif
 ;
@@ -326,7 +326,7 @@ EXTERN void Debug_HAL_Get_StopSignal(Debug_TID_t ThreadID,Debug_Signal_t *signo)
 EXTERN CPU_INT08U Debug_HAL_INST_Is_Condition_True(CPU_INT32U Instruction,Debug_TID_t ThreadID);
 EXTERN Debug_MemWidth *Debug_HAL_INST_Get_Target_Address(CPU_INT32U Instruction);
 EXTERN Debug_MemWidth *Debug_HAL_UNCONDINST_Get_Target_Address(CPU_INT32U Instruction);
-EXTERN CPU_INT32S InsertBpInsideBplist(Debug_MemWidth *bPAddress,enum BpLifeTime lifetime);
+EXTERN CPU_INT32S InsertBpInsideBplist(Debug_MemWidth *bPAddress,enum BpLifeTime);
 EXTERN CPU_INT32U Activate_Sw_BreakPoints();
 EXTERN CPU_INT32U Gdb_Arch_Set_BreakPoint(unsigned long bPAddress,char * savedInst);
 EXTERN CPU_INT32U BreakPointMemWrite(void * srcAddress,void  * desAddress,unsigned int size);

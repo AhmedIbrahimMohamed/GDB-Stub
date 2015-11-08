@@ -17,7 +17,7 @@ enum BpState {
 };
 
 enum BpLifeTime {
-	BP_StubTemp,
+	BP_StubTemp = 1,
 	BP_UserPermenant
 };
 #endif

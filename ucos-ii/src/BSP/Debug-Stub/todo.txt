@@ -97,5 +97,17 @@ This would be resolved when do step 2
 
 
 --------------- 
+	9/11/2015
+	done:test one test case of Bx-register,BL-immed
+	
+	TODO:
+	rest of test case for b,blx
+	
+-----------------
+10/11/2015
+done: blx r3
+
+todo: blx r3 injection
+	  pop pc 
 	
 	

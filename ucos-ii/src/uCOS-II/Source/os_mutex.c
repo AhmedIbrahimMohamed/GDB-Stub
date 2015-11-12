@@ -235,6 +235,9 @@ OS_EVENT  *OSMutexCreate (INT8U   prio,
     pevent->OSEventCnt  = (INT16U)((INT16U)prio << 8u) | OS_MUTEX_AVAILABLE; /* Resource is avail.     */
     pevent->OSEventPtr  = (void *)0;                       /* No task owning the mutex                 */
 #if OS_EVENT_NAME_EN > 0u
+    /*added for stub testing*/
+    OSEventNameSet(pevent,"App Mutex",perr);
+    /*End added for stub debugging*/
     pevent->OSEventName = (INT8U *)(void *)"?";
 #endif
     OS_EventWaitListInit(pevent);

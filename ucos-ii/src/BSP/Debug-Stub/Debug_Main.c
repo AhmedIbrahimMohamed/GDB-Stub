@@ -63,7 +63,7 @@
 *********************************************************************************************************
 */
 
-
+//#define INJECT_TESTING
 /*
 *********************************************************************************************************
 *                                           LOCAL CONSTANTS
@@ -494,6 +494,8 @@ CPU_INT08U Debug_Main_Step_machine_instruction(Debug_TID_t ThreadID,void *Comman
 	Debug_MemWidth  target_PC;
 	CPU_INT08S Cond_Res;
 
+#ifndef INJECT_TESTING
+
 	if(CommandParam)/*if we have a valid step address in <s>packet, update task PC with it*/
          Debug_HAL_Regs_WriteOne(current_thread_OF_Focus,PC_Offset ,(Debug_RegisterWidth)CommandParam);/*update current thread_PC with passed packet step  address*/
 
@@ -528,7 +530,19 @@ CPU_INT08U Debug_Main_Step_machine_instruction(Debug_TID_t ThreadID,void *Comman
 
 	if (InsertBpInsideBplist(&target_PC,BP_StubTemp) != DEBUG_SUCCESS)
 				return DEBUG_BRKPT_ERROR_UnableSET;
+#else
+	Debug_HAL_Regs_Readall(ThreadID);
 
+	//injection for
+
+	//1- "blx r3" with opcode :0xe12fff33
+
+	target_PC = Debug_HAL_INST_Get_Target_Address(0xe12fff33);
+	//2- "" with opcode :
+	//3- "" with opcode :
+	//4- "" with opcode :
+	//5- "" with opcode :
+#endif
 	return DEBUG_SUCCESS;
 
 }

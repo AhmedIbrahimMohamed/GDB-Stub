@@ -219,7 +219,10 @@ static  void  AppTaskCreate (void)
    	                       (CPU_STK_SIZE)APP_CFG_TASK_3_STK_SIZE,
    	                       (void       *)0,
    	                       (CPU_INT16U  )(OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR));
+/*added here for stub debugging*/
+	//AppMutexCreate();                                           /* Create Mutual Exclusion Semaphores                   */
 #endif
+
     OSTaskCreateExt(AppTask1,                                   /* Create the Task #1.                                  */
                    (void       *)0,
                    (OS_STK     *)&AppTask1Stk[APP_CFG_TASK_1_STK_SIZE - 1],

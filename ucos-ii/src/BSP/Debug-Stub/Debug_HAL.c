@@ -918,7 +918,7 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 	 * Is it Branching(B,BLX(immediate) or LD/POP)*/
 	if (Instruction & 0x02000000)
 	{
-		/*B or BLX(immediate)*/
+		/*B or BL(immediate)*/
 		/*targetAddress = Align(PC,4) + SignExtend(imm24:'00', 32);
 		 * SignExtend(x, i) = Replicate(TopBit(x), i-Len(x)) : x
 		 * */
@@ -944,6 +944,15 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 			if(((Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP) == Debug_HAL_INST_PC_ID)/*in case of LDR(literal)*/
 						Rn += 8;  /*PC at prefetch stage in pipeline*/
 
+			else if(((Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP) == Debug_HAL_INST_SP_ID)/*if POP-EncodeA1*/
+			{
+				/*This instruction deals directly with task stack , the following should apply for each instruction manipulate stack
+				 * here , we have to adjust the task stack to emulate as we are about to execute the POP instruction
+				 * this is because task stack holds it context now (as we are now switched to Stub task)
+				 * So, we need to to emulate popping it and being executing task
+				*/
+				Rn += (Debug_RTOS_Stack_TaskContext_Size *4);
+			}
 			/*Calculate how many register are to be loaded including PC*/
 			CPU_INT08U regs_Number_loaded = Count_NumRegsLoaded((CPU_INT16U)(Instruction & 0x0000FFFF));
 
@@ -953,7 +962,7 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 			//if((Instruction & 0x00C00000) == 0x00800000)/*increment*/
 			if((Instruction & 0x02C00000) == 0x00800000) /*Increment*/
 			{
-				address = Rn + (4*regs_Number_loaded) - (4*( (Instruction & 0x03400000) == 0x00000000));/*subtract 4 if increment after*/
+				address = Rn + (4*regs_Number_loaded) - (4*( (Instruction & 0x03400000) == 0x00000000));/*subtract 4 if increment after(POP-EncodingA1/LDMIA/LDMFD)*/
 				/*(!(Instruction & 0x01000000)) subtract 4 if increment after*/
 			}
 			//if((Instruction & 0x00C00000) == 0x00000000)/*Decrement*/

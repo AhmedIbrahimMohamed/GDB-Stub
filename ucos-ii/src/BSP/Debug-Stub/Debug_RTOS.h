@@ -42,6 +42,7 @@
 #define Debug_RTOS_TCB_SPOffset     (0)        /*offset of SP (task/thread stack pointer) member in RTOS Task Control Block
                                                  offset is in word size*/
 
+#define Debug_RTOS_Stack_TaskContext_Size 16     /*size(in words) of task Context that RTOS save/restore during Context Switch */
 
 /*
 *********************************************************************************************************

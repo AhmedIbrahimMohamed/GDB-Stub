@@ -146,7 +146,9 @@
 #define PC_RegSpec2_BM  0x0000F000        //[12-15]
 #define PC_RegSpec2_BP  12
 #define PC_RegSpec3_BM  0x000F0000        //[16-19]
-#define Debug_HAL_INST_PC_ID   0xF
+#define Debug_HAL_INST_PC_ID   0x0F
+#define Debug_HAL_INST_SP_ID   0x0D
+
 
 
 /*other instruction fields Bitmasks*/

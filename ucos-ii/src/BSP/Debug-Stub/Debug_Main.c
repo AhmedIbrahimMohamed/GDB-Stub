@@ -538,7 +538,8 @@ CPU_INT08U Debug_Main_Step_machine_instruction(Debug_TID_t ThreadID,void *Comman
 	//1- "blx r3" with opcode :0xe12fff33
 
 	target_PC = Debug_HAL_INST_Get_Target_Address(0xe12fff33);
-	//2- "" with opcode :
+	//2- "ERET" with opcode :0xe160006E
+	target_PC = Debug_HAL_INST_Get_Target_Address(0xe160006E);
 	//3- "" with opcode :
 	//4- "" with opcode :
 	//5- "" with opcode :

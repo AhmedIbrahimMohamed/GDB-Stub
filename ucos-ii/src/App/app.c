@@ -292,7 +292,8 @@ static  void  AppTask1 (void *p_arg)
     (void)p_arg;
 
     AppPrint("Task #1 Started\r\n");
-
+    //asm("bkpt");
+    asm("ldrb	r3, [r3, r2]");
     while (DEF_ON) {                                            /* Task body, always written as an infinite loop.       */
 
     	//AppPrint("1");

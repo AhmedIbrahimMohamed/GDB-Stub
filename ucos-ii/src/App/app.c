@@ -294,6 +294,9 @@ static  void  AppTask1 (void *p_arg)
     AppPrint("Task #1 Started\r\n");
     //asm("bkpt");
     asm("ldrb	r3, [r3, r2]");
+    //for testing "stmia"
+   // CPU_INT32U instructions [9] = {0xE12FFF12,0xE12FFF14, 0xE12FFF1F, 0xe12fff1e ,0xe12fff10,0xe12FFF32, 0xe12FFF34,0xe12FFF3F,0xe12fff33 };
+
     while (DEF_ON) {                                            /* Task body, always written as an infinite loop.       */
 
     	//AppPrint("1");

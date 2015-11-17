@@ -942,6 +942,7 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 	if( (Instruction & PC_RegList_BM) && (Instruction & 0x00100000))/*Is PC in Reg_List and we are in Load/POP not store/push, this excludes LDM(user register) too*/
 		{
 
+		CPU_INT32U increment,wordhigher ;
 			CPU_INT32U Rn = Debug_HAL_RegsBuffer[(Instruction &Instruction_Rn_BM) >> Instruction_Rn_BP];
 
 			if(((Instruction & Instruction_Rn_BM) >>Instruction_Rn_BP) == Debug_HAL_INST_PC_ID)/*in case of LDR(literal)*/
@@ -961,23 +962,29 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 
 			CPU_INT32U *address ;
 
-			/*Do we increment or decrement*/
-			//if((Instruction & 0x00C00000) == 0x00800000)/*increment*/
-			if((Instruction & 0x02C00000) == 0x00800000) /*Increment*/
+			/*Do we increment or decrement or LDM(Exception Return)*/
+
+			if((Instruction & 0x00C00000) == 0x00800000)/*increment*/
+			//if((Instruction & 0x02C00000) == 0x00800000) /*Increment bit[23]=1*/
 			{
-				address = Rn + (4*regs_Number_loaded) - (4*( (Instruction & 0x03400000) == 0x00000000));/*subtract 4 if increment after(POP-EncodingA1/LDMIA/LDMFD)*/
-				/*(!(Instruction & 0x01000000)) subtract 4 if increment after*/
+				//address = Rn + (4*regs_Number_loaded) - (4*( (Instruction & 0x03400000) == 0x00000000));/*subtract 4 if increment after(POP-EncodingA1/LDMIA/LDMFD)*/
+				CPU_INT08U inc_after = (4*((Instruction & 0x01000000) == 0));
+				address = Rn + (4*regs_Number_loaded) - inc_after ; /* subtract 4 if increment after via bit [24]*/
 			}
-			//if((Instruction & 0x00C00000) == 0x00000000)/*Decrement*/
-			else if((Instruction & 0x02C00000) == 0x00000000)/*Decrement*/
+			else if((Instruction & 0x00C00000) == 0x00000000)/*Decrement*/
+			//else if((Instruction & 0x02C00000) == 0x00000000)/*Decrement*/
 			{
-				address = Rn - (4* ((Instruction & 0x03400000) == 0x01000000) );/*subtract 4 if decrement before*/
-				/*(Instruction & 0x01000000) subtract 4 if decrement before*/
+				 CPU_INT08U dec_before = ((Instruction & 0x01000000) == 0x01000000);
+				//address = Rn - (4* ((Instruction & 0x03400000) == 0x01000000) );/*subtract 4 if decrement before*/
+				address = Rn - (4* dec_before); /*subtract 4 if decrement before*/
 			}
 	        else /*LDM(Exception Return)*/
 				{
-	        	  address = Rn - (4*regs_Number_loaded *(!(Instruction & 0x00800000)) ) /*subtract if U-bit[23] is cleared*/
-	        	      + (4*((Instruction & 0x00800000) ==(Instruction & 0x01000000))) ; /*add 4 if P-bit[24]==U-bit*/
+	        	  increment = 4*regs_Number_loaded *( (Instruction & 0x00800000) == 0 ) ;/*if U-bit == 0 */
+	        	  wordhigher = ((Instruction & 0x00800000) >> 23) == ((Instruction & 0x01000000) >> 24);/*if P-bit[24]==U-bit*/
+	        	  address = Rn - increment /*subtract if U-bit[23] == 0 */
+	        	      + (4*wordhigher) /*add 4 if P-bit[24]==U-bit*/
+	        	  	  + (4*(regs_Number_loaded - 1));/*To jump to PC address*/
 
 				}
 			return (*address);

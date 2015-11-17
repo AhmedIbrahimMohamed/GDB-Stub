@@ -63,7 +63,7 @@
 *********************************************************************************************************
 */
 
-//#define INJECT_TESTING
+#define INJECT_TESTING
 /*
 *********************************************************************************************************
 *                                           LOCAL CONSTANTS
@@ -540,9 +540,14 @@ CPU_INT08U Debug_Main_Step_machine_instruction(Debug_TID_t ThreadID,void *Comman
 	target_PC = Debug_HAL_INST_Get_Target_Address(0xe12fff33);
 	//2- "ERET" with opcode :0xe160006E
 	target_PC = Debug_HAL_INST_Get_Target_Address(0xe160006E);
-	//3- "" with opcode :
-	//4- "" with opcode :
-	//5- "" with opcode :
+	//3- "stmdb" with opcode :e92d500
+	target_PC = Debug_HAL_INST_Get_Target_Address(0xe92d500f);
+
+	//4- "stmib" with opcode :0xe98 5 8000
+	target_PC = Debug_HAL_INST_Get_Target_Address(0xe9858000);
+
+	//5- "stmda" with opcode :0xe80 F F000
+	target_PC = Debug_HAL_INST_Get_Target_Address(0xe80FF000);
 #endif
 	return DEBUG_SUCCESS;
 

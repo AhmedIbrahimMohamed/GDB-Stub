@@ -63,7 +63,7 @@
 *********************************************************************************************************
 */
 
-#define INJECT_TESTING
+//#define INJECT_TESTING
 /*
 *********************************************************************************************************
 *                                           LOCAL CONSTANTS
@@ -730,6 +730,9 @@ void Gdb_Handle_Exception(CPU_INT08U Exception_ID)
 	      case OS_CPU_ARM_EXCEPT_ABORT_DATA:
 	    	  Command_opts_HaltSig.Signum = SIGBUS;
 	    	  Debug_Block_Message = Debug_Exception_MemoryError ;
+	    	  /*TODO::
+	    	   * discuss if we need to do PC + 4   to skip the exception-point address
+	    	   * */
 	      break;
 
 	      case OS_CPU_ARM_EXCEPT_ABORT_PREFETCH:

@@ -192,6 +192,7 @@ void  OS_CPU_IntHandler (CPU_INT32U  src_id)
 #else
         	while(1);
 #endif
+        	break;
         case OS_CPU_ARM_EXCEPT_RSVD:        
         	break;
         default:        

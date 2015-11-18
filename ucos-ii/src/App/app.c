@@ -291,9 +291,12 @@ static  void  AppTask1 (void *p_arg)
 {
     (void)p_arg;
 
+
     AppPrint("Task #1 Started\r\n");
     //asm("bkpt");
-    asm("ldrb	r3, [r3, r2]");
+    //asm("ldrb	r3, [r3, r2]");
+    asm("SVC #1");
+    //p_arg = AppPrint;
     //for testing "stmia"
    // CPU_INT32U instructions [9] = {0xE12FFF12,0xE12FFF14, 0xE12FFF1F, 0xe12fff1e ,0xe12fff10,0xe12FFF32, 0xe12FFF34,0xe12FFF3F,0xe12fff33 };
 

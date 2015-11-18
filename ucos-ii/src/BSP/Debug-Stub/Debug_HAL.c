@@ -654,7 +654,10 @@ static Debug_MemWidth Get_Target_DP_Class(CPU_INT32U Instruction)
 						break;
 					case 0x00200070: //BKPT
 						/*Breakpoint causes a Prefetch Abort Exception */
-						return Excep_Vector_Base + Excep_Vector_Prefetch_Offset;
+						//return Excep_Vector_Base + Excep_Vector_Prefetch_Offset;
+						/*TODO::
+								 * put a clear justification*/
+						return 0;
 						break;
 				}
 
@@ -1021,11 +1024,21 @@ static Debug_MemWidth Get_Target_COPSVC_Class(CPU_INT32U Instruction)
 	/*is it SVC call*/
 	if ( (Instruction & 0x03000000) == 0x03000000 )
 	{
-		return Excep_Vector_Base + Excep_Vector_SVC_Offset ;/*SVC entry address in Vector table*/
+		//return Excep_Vector_Base + Excep_Vector_SVC_Offset ;/*SVC entry address in Vector table*/
+		/*TODO::
+		 * put a clear justification*/
+		return 0;
 	}
 
 	else if ((Instruction & Debug_HAL_COP_SVC_UNDEFINED_BM) == Debug_HAL_COP_SVC_UNDEFINED)
-	{/*TODO:: Deal with Explicit undefined instruction*/ }
+	{/*TODO::
+	Deal with Explicit undefined instruction*/
+		//return Excep_Vector_Base + Excep_Vector_UNDEFINED_Offset ;
+		/*TODO::
+				 * put a clear justification*/
+		return 0;
+	}
+
 	return 0;
 }
 
@@ -1187,8 +1200,8 @@ static CPU_INT08U Count_NumRegsLoaded( CPU_INT16U CPU_RegList)
 
 		/**/
 		address = Rn
-				     -( 8 * (!(Instruction & 0x00800000)) )/*subtract 8 if U bit[23] is cleared*/
-				     + (4 * ( (Instruction & 0x00800000) == (Instruction & 0x01000000) ) );/*add 4 if P bit[24] == U bit*/
+				     -( 8 * ((Instruction & 0x00800000) == 0) )/*subtract 8 if U bit[23] is cleared*/
+				     + (4 * ( ((Instruction & 0x00800000) >> 23) == ((Instruction & 0x01000000) >> 24) ));/*add 4 if P bit[24] == U bit[23]*/
 	return (*address);
 	}
 

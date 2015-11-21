@@ -515,21 +515,21 @@ CPU_INT08U Debug_Main_Step_machine_instruction(Debug_TID_t ThreadID,void *Comman
 		target_PC = (Debug_MemWidth *)Debug_HAL_INST_Get_Target_Address((CPU_INT32U)*current_PC);
 	}
 	else if(Cond_Res == Debug_Instruction_UNCOND)
-	{
 		/*step # 2  IF Needed : Update PC with Target PC from instructino encoding*/
 		/*Decode unconditional instructions separately */
-
 		target_PC = Debug_HAL_INST_Get_Target_UNCOND_Class((CPU_INT32U)*current_PC);
 
-	}
 
 	if(!(target_PC))
 		target_PC = current_PC + 1;  /*initially, next PC is 4 bytes away  from current PC */
 
-	/*Step#3 insert a Temporary breakpoint at real target PC*/
+	else if(target_PC == DEBUG_ERR_ExceptionInstruction)
+		return DEBUG_SUCCESS;
 
+	/*Step#3 insert a Temporary breakpoint at real target PC*/
 	if (InsertBpInsideBplist(&target_PC,BP_StubTemp) != DEBUG_SUCCESS)
-				return DEBUG_BRKPT_ERROR_UnableSET;
+					return DEBUG_BRKPT_ERROR_UnableSET;
+
 #else
 	Debug_HAL_Regs_Readall(ThreadID);
 
@@ -732,7 +732,12 @@ void Gdb_Handle_Exception(CPU_INT08U Exception_ID)
 	    	  Debug_Block_Message = Debug_Exception_MemoryError ;
 	    	  /*TODO::
 	    	   * discuss if we need to do PC + 4   to skip the exception-point address
+	    	   * to avoid retraping in it,
+	    	   * some issue here: if GDB request a <g> after <SSIGBUS>,it would get the next PC not current PC
 	    	   * */
+	          Debug_HAL_Regs_WriteOne(current_thread_OF_Focus,PC_Offset ,(PC+1));/*update current thread_PC with passed packet step  address*/
+
+
 	      break;
 
 	      case OS_CPU_ARM_EXCEPT_ABORT_PREFETCH:
@@ -754,6 +759,13 @@ void Gdb_Handle_Exception(CPU_INT08U Exception_ID)
 	        	{
 					Command_opts_HaltSig.Signum = SIGBUS;
 					Debug_Block_Message = Debug_Exception_MemoryError;
+					/*TODO::
+						    	   * discuss if we need to do PC + 4   to skip the exception-point address
+						    	   * to aviod retraping in it
+						    	   * */
+					 Debug_HAL_Regs_WriteOne(current_thread_OF_Focus,PC_Offset ,(PC+1));/*update current thread_PC with passed packet step  address*/
+
+
 	        	}
 	       break;
 

@@ -39,6 +39,7 @@ typedef CPU_INT08U  Debug_Block_Message_t;    /*Type of meessage exchanged when 
 #define  DEBUG_ERR_INVALID_REGID                  20
 #define  DEBUG_ERR_INVALID_HEXChar                21
 #define  DEBUG_ERR_INOUTBUF_OVERFLOW              22
+#define  DEBUG_ERR_ExceptionInstruction           23
 
 #define  Debug_PacketErrorCode                    1
 

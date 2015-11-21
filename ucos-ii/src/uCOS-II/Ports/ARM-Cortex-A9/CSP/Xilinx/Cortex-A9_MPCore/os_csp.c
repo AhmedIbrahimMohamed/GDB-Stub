@@ -182,6 +182,7 @@ void  OS_CPU_IntHandler (CPU_INT32U  src_id)
         case OS_CPU_ARM_EXCEPT_RST: /*How this could get here??*/
         case OS_CPU_ARM_EXCEPT_SWI:
 
+
         	break;
         case OS_CPU_ARM_EXCEPT_UND:
         case OS_CPU_ARM_EXCEPT_ABORT_DATA:

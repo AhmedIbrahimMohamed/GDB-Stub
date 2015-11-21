@@ -374,6 +374,8 @@ CPU_INT08U Debug_HAL_Regs_WriteOne(Debug_TID_t ThreadID, Debug_RegID_t regno, De
 	else if(regno == LR_Offset || regno == PC_Offset)
 		*(Debug_SP + regno) = RegValue;
 
+	/*Update HAL_Buffer*/
+	Debug_HAL_RegsBuffer[regno] = RegValue;
 	/*Floating point register IDs are ignored and they are always 0's*/
 
 
@@ -657,7 +659,8 @@ static Debug_MemWidth Get_Target_DP_Class(CPU_INT32U Instruction)
 						//return Excep_Vector_Base + Excep_Vector_Prefetch_Offset;
 						/*TODO::
 								 * put a clear justification*/
-						return 0;
+						//return 0;
+						return DEBUG_ERR_ExceptionInstruction;
 						break;
 				}
 
@@ -1036,7 +1039,7 @@ static Debug_MemWidth Get_Target_COPSVC_Class(CPU_INT32U Instruction)
 		//return Excep_Vector_Base + Excep_Vector_UNDEFINED_Offset ;
 		/*TODO::
 				 * put a clear justification*/
-		return 0;
+		return DEBUG_ERR_ExceptionInstruction;
 	}
 
 	return 0;

@@ -64,7 +64,7 @@
 */
 #define Debug_RSP_NumCommPackets  20                   /*Number of command Packets*/
 
-#define  Debug_RSP_DefaultNumBytesRxedINT  16  /*This is the default Number of bytes that  RSP module needs from IO module
+#define  Debug_RSP_DefaultNumBytesRxedINT  15  /*This is the default Number of bytes that  RSP module needs from IO module
                                                              when receive interrupt occurs*/
 
 //#define Debug_RSP_IN_OUTBUFMax			((NUMREGBYTES << 1) + 10)

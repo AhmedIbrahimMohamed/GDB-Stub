@@ -161,7 +161,9 @@ static void debug_uart_handlerTest(void *);
 
 static CPU_INT08U Debug_UART_Read_char()
 {
-	CPU_INT08U RxChar;
+	CPU_INT32U ImrRegister = XUartPs_ReadReg(Uart_Ps_0.Config.BaseAddress,
+		 				  XUARTPS_IMR_OFFSET);
+			CPU_INT08U RxChar;
 	while((XUartPs_Recv(&Uart_Ps_0,&RxChar,1)) == 0);
 
 	return RxChar;
@@ -318,19 +320,22 @@ static CPU_INT08U Debug_UART_Read_TillChar(CPU_INT08U* buf , CPU_INT08U StopChar
 */
 
  CPU_INT08U Debug_UART_Read_IgnoreTillChar(CPU_INT08U StopChar)
-		{
-	      CPU_INT08U  charsink;
-	      CPU_INT08U RxSkippedCharCount = 0;
-	      RxSkippedCharCount = XUartPs_Recv( &Uart_Ps_0, &charsink, 1 );
-		  while(charsink != StopChar)
+{
+
+
+
+	 CPU_INT08U  charsink;
+	 CPU_INT08U RxSkippedCharCount = 0;
+    RxSkippedCharCount = XUartPs_Recv( &Uart_Ps_0, &charsink, 1 );
+    while(charsink != StopChar)
 		  {
 			  RxSkippedCharCount += XUartPs_Recv( &Uart_Ps_0, &charsink, 1 );
 		  }
 
 
-		  return RxSkippedCharCount;
+   return RxSkippedCharCount;
 
-		}
+}
 /*********************************************************************************************************
  *                                               Init_UART_Port()
  *
@@ -467,10 +472,7 @@ void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, 
 
 	    Debug_RSP_DefaultNumBytesRxedINT =   INT_RxCount;
 	    Debug_IO_RSPBufferPtr            =   RSPRxBufferPtr;
-	    /*need explicitly to unify the Rx-Tigger-level of UART registers and the RSP-needded Rx Trigger Level*/
-	   	    XUartPs_WriteReg(Config_0->BaseAddress,
-	   	    			   XUARTPS_RXWM_OFFSET, Debug_RSP_DefaultNumBytesRxedINT);
-	    /*configure the Receive Buffer attributes (set number of requested bytes,remaining bytes , NextBytePtr*/
+	   	    /*configure the Receive Buffer attributes (set number of requested bytes,remaining bytes , NextBytePtr*/
 
 	    Uart_Ps_0.ReceiveBuffer.RequestedBytes = Uart_Ps_0.ReceiveBuffer.RemainingBytes = Debug_RSP_DefaultNumBytesRxedINT;
 
@@ -479,20 +481,30 @@ void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, 
 	     * should be updated to point to  Uart_Ps_0.ReceiveBuffer.NextBytePtr = Debug_IO_RSPBufferPtr->nextptr*/
 	    Uart_Ps_0.ReceiveBuffer.NextBytePtr = &Debug_IO_RSPBufferPtr[0];
 
-	    /*Enable UART interrup */
-	    CSP_IntEn(CSP_INT_CTRL_NBR_MAIN,
-	       		CSP_INT_SRC_NBR_UART_01);
+	    /****** register the Debug-related Handler for Port interrupt******/
 
-
+	    	    XUartPs_SetHandler(&Uart_Ps_0, Debug_IO_PortHandler ,
+	    	    		    				   (void *)0);
 
 	        /*
 	    	 * Enable the interrupt of the UART so interrupts will occur,
 	    	 */
+	    	    /*need explicitly to unify the Rx-Tigger-level of UART registers and the RSP-needded Rx Trigger Level*/
+	    	  XUartPs_WriteReg(Config_0->BaseAddress,
+	    	   	   	    			   XUARTPS_RXWM_OFFSET, Debug_RSP_DefaultNumBytesRxedINT);
 
-	     CPU_INT32U TestIntMask = XUARTPS_IXR_RXOVR | XUARTPS_IXR_RXFULL  ;
-   	    // XUartPs_SetInterruptMask(&Uart_Ps_0, TestIntMask);
+	    CPU_INT32U TestIntMask = XUARTPS_IXR_RXOVR | XUARTPS_IXR_RXFULL  ;
+	    //CPU_INT32U TestIntMask =  XUARTPS_IXR_RXFULL  ;
+	     XUartPs_SetInterruptMask(&Uart_Ps_0, TestIntMask);
 
-	    				/***** Initialize port callback functions and other attributes*********/
+		    /*Enable UART interrupt */
+		    CSP_IntEn(CSP_INT_CTRL_NBR_MAIN,
+		       		CSP_INT_SRC_NBR_UART_01);
+
+		    CPU_INT32U ImrRegister = XUartPs_ReadReg(Uart_Ps_0.Config.BaseAddress,
+		    		 				  XUARTPS_IMR_OFFSET);
+
+		    /***** Initialize port callback functions and other attributes*********/
 
         Debug_Port.Debug_Read_char           = Debug_UART_Read_char;
         Debug_Port.Debug_Write_char          = Debug_UART_Write_char;
@@ -505,11 +517,7 @@ void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, 
         Debug_Port.Debug_Read_IgnoreTillChar = Debug_UART_Read_IgnoreTillChar;
 
 
-                             /****** register the Debug-related Handler for Port interrupt******/
-
-	    XUartPs_SetHandler(&Uart_Ps_0, Debug_IO_PortHandler ,
-	    		    				   (void *)0);
-	    					/******I Think we need to Flush UART-FIFOs here******/
+                             	    					/******I Think we need to Flush UART-FIFOs here******/
 /*need reading from TRM , https://lkml.org/lkml/2015/1/16/245 , http://www.ece.drexel.edu/courses/ECE-C490SBC/Notes/AudioCodec_base_Design/main.c*/
 
 

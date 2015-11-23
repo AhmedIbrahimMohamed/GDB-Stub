@@ -353,6 +353,8 @@ do{
 
     	/*Receiving payload*/
    	 Debug_RSP_Payload_InBuf[Rxcount] = RxChar;
+   	 //extern void AppPrint(char *c);
+   	// Debug_RSP_Console_Packet(&Debug_RSP_Payload_InBuf[Rxcount]);
 #if (Debug_NoCheckSumCheck == 0)
 
    	 //CalcChecksum += RxChar;
@@ -1080,7 +1082,7 @@ static CPU_INT08U Debug_Mem2Hex(Debug_MemWidth *start_address, Debug_Len_t ByteC
 
 	 if(Count == ByteCount)  /*we are done*/
 		 return DEBUG_SUCCESS ;
-	 return DEBUG_ERR_INVALID_HEXChar ;
+	 return DEBUG_ERR_INVALID_HEXChar ;/*or actual sent character are less than enclosed in packet*/
  }
 
  /*

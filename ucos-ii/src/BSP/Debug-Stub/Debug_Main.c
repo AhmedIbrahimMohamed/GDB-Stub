@@ -445,6 +445,8 @@ CPU_INT08U Debug_Main_Write_memory(Debug_TID_t ThreadID,void *CommandParam)
        count ++;
 	}
       count = 0;
+
+      /*Check If it Writes Successfully*/
    src = (CPU_INT08U *)M_options->MemoryArrayptr;
    dst = M_options->start_address;
 
@@ -452,6 +454,7 @@ CPU_INT08U Debug_Main_Write_memory(Debug_TID_t ThreadID,void *CommandParam)
     	{
            if(*(dst++) != *(src++))
         	   return DEBUG_MEM_ERROR;
+           count ++;
     	}
 
     /*Flush the cache */
@@ -491,7 +494,7 @@ CPU_INT08U Debug_Main_Write_memory(Debug_TID_t ThreadID,void *CommandParam)
 CPU_INT08U Debug_Main_Step_machine_instruction(Debug_TID_t ThreadID,void *CommandParam)
 {
 	Debug_MemWidth * current_PC;
-	Debug_MemWidth  target_PC;
+	Debug_MemWidth  target_PC = 0;
 	CPU_INT08S Cond_Res;
 
 #ifndef INJECT_TESTING

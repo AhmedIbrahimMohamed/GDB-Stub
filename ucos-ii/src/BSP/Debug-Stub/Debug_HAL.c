@@ -726,7 +726,7 @@ static Debug_MemWidth Get_Target_DP_Class(CPU_INT32U Instruction)
             	    	//  if ((Instruction & Instruction_Rn_BM) == Debug_HAL_INST_PC_ID) //ADR-Encoding A2
 						  //{
 							//  /*TODO::should PC here be prefetch i.e. PC= PC+8*/
-							  //return (Debug_HAL_RegsBuffer[PC_Offset] & 0xFFFFFFF6) - shifted;
+							  //return (Debug_HAL_RegsBuffer[PC_Offset] & 0xFFFFFFFC) - shifted;
 						  //}
             	    	 //return Rn + (~shifted) + 1;
             	    	  return (CPU_INT32U)Rn - shifted;
@@ -739,7 +739,7 @@ static Debug_MemWidth Get_Target_DP_Class(CPU_INT32U Instruction)
             	    	  //if ((Instruction & Instruction_Rn_BM) == Debug_HAL_INST_PC_ID) //ADR-Encoding A1
 							//  {
             	    	//	  /*TODO::should PC here be prefetch i.e. PC= PC+8*/
-            	    	  //       return (Debug_HAL_RegsBuffer[PC_Offset] & 0xFFFFFFF6) + shifted /*+ 8*/;
+            	    	  //       return (Debug_HAL_RegsBuffer[PC_Offset] & 0xFFFFFFFC + shifted /*+ 8*/;
 							//  }
 							  return  Rn + shifted ;
             	      		break;
@@ -837,8 +837,8 @@ static Debug_MemWidth Get_Target_LDSTR_Class(CPU_INT32U Instruction)
 
 
 	/*Continue decoding if  target register Rt[12-15] is the Program counter*/
-	//if( ( (Instruction & Instruction_Rt_BM) >> Instruction_Rt_BP ) == Debug_HAL_INST_PC_ID)
-	//{
+	if( ( (Instruction & Instruction_Rt_BM) >> Instruction_Rt_BP ) == Debug_HAL_INST_PC_ID)
+	{
 		if(Rn == Debug_HAL_INST_PC_ID)/*in case of LDR/STR(literal)*/
 				Rn = Debug_HAL_RegsBuffer[Rn] + 8;  /*PC at prefetch stage in pipeline*/
 		else
@@ -893,7 +893,7 @@ static Debug_MemWidth Get_Target_LDSTR_Class(CPU_INT32U Instruction)
 
 		else if((Instruction & LDSTR_WB_BM) == LDSTR_WB_Media) /*if it is Media instruction*/
 			return Get_Target_LDSTR_Media(Instruction);
-	//}/*if destination register is PC*/
+	}/*if destination register is PC*/
 return 0;
 }
 /*
@@ -936,7 +936,7 @@ static Debug_MemWidth Get_Target_Branch_Class(CPU_INT32U Instruction)
 		if(Instruction & 0x00800000)
 			offset |= 0xFC000000; /*replicate Top-Bit of imm24 bit (32total-26shifted imm24)times*/
 
-		return ( Debug_HAL_RegsBuffer[PC_Offset] & 0xFFFFFFF6 ) + 8/*for prefetch stage */ + offset ;
+		return ( Debug_HAL_RegsBuffer[PC_Offset] & 0xFFFFFFFC ) + 8/*for prefetch stage */ + offset ;
 	}
 		/*LDMxx/POP/STMxx/PUSH*/
 
@@ -1219,7 +1219,7 @@ static CPU_INT08U Count_NumRegsLoaded( CPU_INT16U CPU_RegList)
 		if(Instruction & 0x00800000)
 			offset |= 0xFC000000; /*replicate Top-Bit of imm24 bit (32total-26shifted imm24)times*/
 
-		return ( Debug_HAL_RegsBuffer[PC_Offset] & 0xFFFFFFF6 ) + 8/*for prefetch stage */ + offset ;
+		return ( Debug_HAL_RegsBuffer[PC_Offset] & 0xFFFFFFFC ) + 8/*for prefetch stage */ + offset ;
 	}
 
 	if((Instruction & 0x0FF00000) == 0x0C500000)/*Is it MRRC,MRRC2 */

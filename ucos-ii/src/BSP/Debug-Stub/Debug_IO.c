@@ -490,18 +490,19 @@ void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, 
 	    	 * Enable the interrupt of the UART so interrupts will occur,
 	    	 */
 	    	    /*need explicitly to unify the Rx-Tigger-level of UART registers and the RSP-needded Rx Trigger Level*/
-	    	  XUartPs_WriteReg(Config_0->BaseAddress,
-	    	   	   	    			   XUARTPS_RXWM_OFFSET, Debug_RSP_DefaultNumBytesRxedINT);
-
-	    CPU_INT32U TestIntMask = XUARTPS_IXR_RXOVR | XUARTPS_IXR_RXFULL  ;
+	    	 // XUartPs_WriteReg(Config_0->BaseAddress,
+	    	   //	   	    			   XUARTPS_RXWM_OFFSET, Debug_RSP_DefaultNumBytesRxedINT);
+	    	    XUartPs_WriteReg(Config_0->BaseAddress,
+	    	    		XUARTPS_TXWM_OFFSET, Debug_RSP_DefaultNumBytesRxedINT);
+	    //CPU_INT32U TestIntMask = XUARTPS_IXR_RXOVR | XUARTPS_IXR_RXFULL  ;
 	    //CPU_INT32U TestIntMask =  XUARTPS_IXR_RXFULL  ;
+	    	  CPU_INT32U TestIntMask = XUARTPS_IXR_TTRIG;
 	     XUartPs_SetInterruptMask(&Uart_Ps_0, TestIntMask);
 
-		    /*Enable UART interrupt */
-		    CSP_IntEn(CSP_INT_CTRL_NBR_MAIN,
-		       		CSP_INT_SRC_NBR_UART_01);
+		    /*Enable GLobal UART interrupt */
+		//    CSP_IntEn(CSP_INT_CTRL_NBR_MAIN,CSP_INT_SRC_NBR_UART_01);
 
-		    CPU_INT32U ImrRegister = XUartPs_ReadReg(Uart_Ps_0.Config.BaseAddress,
+		 CPU_INT32U ImrRegister = XUartPs_ReadReg(Uart_Ps_0.Config.BaseAddress,
 		    		 				  XUARTPS_IMR_OFFSET);
 
 		    /***** Initialize port callback functions and other attributes*********/
@@ -517,7 +518,8 @@ void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, 
         Debug_Port.Debug_Read_IgnoreTillChar = Debug_UART_Read_IgnoreTillChar;
 
 
-                             	    					/******I Think we need to Flush UART-FIFOs here******/
+                             	    					/******TODO ::
+                             	    					 * I Think we need to Flush UART-FIFOs here******/
 /*need reading from TRM , https://lkml.org/lkml/2015/1/16/245 , http://www.ece.drexel.edu/courses/ECE-C490SBC/Notes/AudioCodec_base_Design/main.c*/
 
 

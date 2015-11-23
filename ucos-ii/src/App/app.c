@@ -293,10 +293,10 @@ static  void  AppTask1 (void *p_arg)
 
 
     AppPrint("Task #1 Started\r\n");
-    //asm("bkpt #1");
+    asm("bkpt #1");
     //asm("ldrb	r3, [r3, r2]");
-    //asm("SVC #1");
-    //asm(".word 0xec000000");
+    asm("SVC #1");
+    asm(".word 0xec000000");
     //p_arg = AppPrint;
     //for testing "stmia"
    // CPU_INT32U instructions [9] = {0xE12FFF12,0xE12FFF14, 0xE12FFF1F, 0xe12fff1e ,0xe12fff10,0xe12FFF32, 0xe12FFF34,0xe12FFF3F,0xe12fff33 };
@@ -385,11 +385,13 @@ CPU_INT32U instructions [9] = {0xE12FFF12,0xE12FFF14, 0xE12FFF1F, 0xe12fff1e ,0x
     Debug_RSP_Put_Packet(&Debug_RSP_Payload_OutBuf[0],Debug_RSP_ReportHaltReason );
 */
 
+//    AppPrint("We need 15 bytes");
     while (Stub_State == Stub_Active) {                                            /* Task body, always written as an infinite loop.       */
 
-//    	OSTimeDlyHMSM(0, 0, 3, 0);
-   // 	Debug_RSP_Get_Packet();                          /* Waits for a packet from host GDB.                                 */
-    //	Stub_State =  Debug_RSP_Process_Packet(current_thread_OF_Focus);                     /* process and respond to packet.                                */
+  	//OSTimeDlyHMSM(0, 0, 3, 0);
+   	Debug_RSP_Get_Packet();                          /* Waits for a packet from host GDB.                                 */
+   	Stub_State =  Debug_RSP_Process_Packet(current_thread_OF_Focus);                     /* process and respond to packet.                                */
+
     }
 
     /*Stub receives a D/K packet Stub_state is */

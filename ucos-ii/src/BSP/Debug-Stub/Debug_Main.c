@@ -120,6 +120,8 @@ typedef enum
 *********************************************************************************************************
 */
 
+static void Debug_Main_PortHandler(void *Data);
+
 /*Register -related manipulating functions*/
 /*may need to be migrated into separate module Ex: Debug_Registers.h*/
 /*
@@ -202,9 +204,20 @@ void Debug_Main_Init()
    /*connect Debug_RSP pending/posting_Function pointers to the pending/posting functions provided by RTOS module*/
    Debug_Stub_PendPtr = Debug_RTOS_StubPend;
    Debug_Stub_PostPtr = Debug_RTOS_StubPost;
+   Debug_RSP_MainHandler = Debug_Main_PortHandler;
  }
 
+static void Debug_Main_PortHandler(void *Data)
+{
+	/* 1- Set Stop Signal to SIGINT*/
+	Command_opts_HaltSig.Signum = SIGINT;
+	Debug_Block_Message = Debug_Exception_InterruptSignal;
 
+	 /* 2- wakeup the StubTask to communicate with host debugger */
+	Debug_RTOS_StubPost((void *)&Debug_Block_Message);
+
+
+}
 
 /*Main debugger-Stub functions*/
 /*should not be migrated to other module*/

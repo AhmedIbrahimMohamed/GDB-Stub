@@ -184,7 +184,7 @@ static  void  AppTaskStart (void *p_arg)
 
     	OSTimeDlyHMSM(0, 0, 0, 100);                            /* Waits 100 milliseconds.                              */
 
-    	AppPrint(".");                                          /* Prints a dot every 100 milliseconds.                 */
+    	//AppPrint(".");                                          /* Prints a dot every 100 milliseconds.                 */
     }
 }
 
@@ -303,10 +303,10 @@ static  void  AppTask1 (void *p_arg)
 
     while (DEF_ON) {                                            /* Task body, always written as an infinite loop.       */
 
-    	//AppPrint("1");
+    	AppPrint("1");
     	OSTimeDlyHMSM(0, 0, 1, 0);                              /* Waits for 1-second.                                  */
 
-    	AppPrint("1");                                          /* Prints 1 to the UART.                                */
+    //	AppPrint("1");                                          /* Prints 1 to the UART.                                */
 
     }
 }
@@ -338,7 +338,7 @@ static  void  AppTask2 (void *p_arg)
     	OSTimeDlyHMSM(0, 0, 2, 0);                              /* Waits for 2-seconds.                                 */
 
     	AppPrint("2");                                          /* Prints 2 to the UART.                                */
-        asm(".word 0xeb1FFFFF");
+        //asm(".word 0xeb1FFFFF");
     }
 }
 

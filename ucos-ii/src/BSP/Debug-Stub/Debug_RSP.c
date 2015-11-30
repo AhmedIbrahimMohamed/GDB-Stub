@@ -201,6 +201,7 @@ void Debug_RSP_Init(void)
 	/*Call Debug_IO module initialization function */
 
 	Debug_IO_init(Debug_RSP_Port_IntHandler,Debug_RSP_DefaultNumBytesRxedINT,Debug_RSP_ReceiveBuffer);
+	//Debug_IO_init(Debug_RSP_Port_IntHandler,Debug_RSP_DefaultNumBytesRxedINT,Debug_RSP_Payload_InBuf);
 
 	Debug_RSP_InitCmmands_FunctionsList();
 
@@ -232,7 +233,11 @@ void Debug_RSP_Init(void)
 */
  void Debug_RSP_Put_Packet(CPU_INT08U *PacketData, Debug_RSP_Commands Command)
  {
+#if USE_ASYNC_INT == 1
 
+	 CPU_INT32U Port_IntState = Debug_IO_Port_InterruptDisable();
+
+#endif
 	 CPU_INT08U Char;
      /*Do we need to Flush Transmit buffer first??*/
 
@@ -297,9 +302,11 @@ void Debug_RSP_Init(void)
 
 	 }
 	 /*else , retransmit packet! assume we receive a '-' NACKing packet we sent*/
- }
 
-
+  }
+#if USE_ASYNC_INT == 1
+	Debug_IO_Port_InterruptRestore(Port_IntState);
+#endif
  }
  /*
  *********************************************************************************************************
@@ -322,7 +329,11 @@ void Debug_RSP_Init(void)
  void Debug_RSP_Get_Packet(void)
  {
 
+#if USE_ASYNC_INT == 1
 
+	 CPU_INT32U Port_IntState = Debug_IO_Port_InterruptDisable();
+
+#endif
 	 //CPU_INT08U *Sinkptr;
        /*Ignore any characters till we get the packet header*/
       CPU_INT08U RxChar;
@@ -383,7 +394,9 @@ do{
 #endif
 
 //}while(PacketCheckSum != CalcChecksum);/*re-receive <--> ack/Nack Cycle*/
-
+#if USE_ASYNC_INT == 1
+	Debug_IO_Port_InterruptRestore(Port_IntState);
+#endif
  }
 
  /*
@@ -616,8 +629,10 @@ do{
 						{
 							/*3- activate all SW breakpoints to be hit when resumed*/
 							//Activate_Sw_BreakPoints();
+							/*4- prepare for async interrupt signal from GDB*/
+							Debug_IO_Port_RxBuffer_Attrs_Init(Debug_RSP_DefaultNumBytesRxedINT,Debug_RSP_ReceiveBuffer);
 
-							/*4- Pend Stub Task so that program resumes */
+							/*5- Pend Stub Task so that program resumes */
 							stub_message = (*Debug_Stub_PendPtr)();
 
 							/*Here , Stub resume with the appropriate Exception Signal,
@@ -648,12 +663,15 @@ do{
 	  	        	 break;
 	  	         case 'c': /* cAA..AA    Continue at address AA..AA (optional) */
 
-					 /*  get  an address to resume from if GDB sent*/
+					 /*  1- get  an address to resume from if GDB sent*/
 					Debug_Hex2Word(&Cmd_Param_start,&Resume_Address);
 
 					err = (*Debug_RSP_Commands_Functions[Debug_RSP_c])(Thread_of_focus,(void *)Resume_Address);
+					/*2- prepare for async interrupt signal from GDB*/
+					Debug_IO_Port_RxBuffer_Attrs_Init(Debug_RSP_DefaultNumBytesRxedINT,Debug_RSP_ReceiveBuffer);
 
-					/*pend on exception occurance */
+
+					/*3- pend on exception occurance */
 					/*Pending mechanism*/
 					stub_message = (*Debug_Stub_PendPtr)();
 
@@ -814,6 +832,15 @@ do{
  */
  static void Debug_RSP_Port_IntHandler(void *packetInfo)
 {
+	 if(Debug_RSP_ReceiveBuffer[0] == Debug_RSP_HostINTSignal)
+	 {
+		 Debug_RSP_ReceiveBuffer[0] = 0;
+		 (*Debug_RSP_MainHandler)((void*) 0);
+
+
+	 }
+
+
 
 }
  /*

@@ -64,7 +64,7 @@
 */
 #define Debug_RSP_NumCommPackets  20                   /*Number of command Packets*/
 
-#define  Debug_RSP_DefaultNumBytesRxedINT  15  /*This is the default Number of bytes that  RSP module needs from IO module
+#define  Debug_RSP_DefaultNumBytesRxedINT  1  /*This is the default Number of bytes that  RSP module needs from IO module
                                                              when receive interrupt occurs*/
 
 //#define Debug_RSP_IN_OUTBUFMax			((NUMREGBYTES << 1) + 10)
@@ -72,7 +72,9 @@
                                                                  400 Hex chars = 200 bytes = 50 words*/
 
 #define Debug_NoCheckSumCheck           1
+#define USE_ASYNC_INT					1
 
+#define Debug_RSP_HostINTSignal        0x03
 /*
 *********************************************************************************************************
 *                                          GLOBAL VARIABLES
@@ -100,7 +102,8 @@ EXTERN CPU_INT08U Debug_RSP_Payload_OutBuf[Debug_RSP_IN_OUTBUFMax]
 
 EXTERN CPU_INT08U (*Debug_RSP_Commands_Functions[Debug_RSP_NumCommPackets])(Debug_TID_t ThreadID, void *CommandParam);
 
-
+typedef   void (*Debug_RSP_MainPortHandler)(void *) ;
+EXTERN   Debug_RSP_MainPortHandler Debug_RSP_MainHandler;
 
 /*
  *
@@ -218,6 +221,7 @@ enum {
 	Debug_Exception_UserBKPT_Hit,
 	Debug_Exception_UNDEFINED_INSTRUCTION,
 	Debug_Exception_MemoryError,
+	Debug_Exception_InterruptSignal
 	//what else can we provide
 
 }Debug_Exception;

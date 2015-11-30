@@ -379,8 +379,8 @@ static void  Init_UART_Port(void)
 */
 
 
-static void   Debug_IO_PortHandler(void *CallBackRef, u32 Event,
-       unsigned int EventData)
+static void   Debug_IO_PortHandler(void *CallBackRef, CPU_INT32U Event,
+		CPU_INT32U EventData)
 {
 
 	CPU_INT08U * RxCount;
@@ -390,30 +390,30 @@ switch(Event)
 			case XUARTPS_EVENT_RECV_DATA :
 				/*Here EventData is number of bytes received*/
 
-				RxCount = &EventData;
-				print("In Debug_IO Handler\n");
-				print("Handling Receive event  Event\n");
-				print("Receive count of : ");
-				print(RxCount);
+				//RxCount = &EventData;
+				//print("In Debug_IO Handler\n");
+				//print("Handling Receive event  Event\n");
+				//print("Receive count of : ");
+				//print(RxCount);
 				/*Reset Requested and remaining bytes*/
-				Uart_Ps_0.ReceiveBuffer.RequestedBytes = Uart_Ps_0.ReceiveBuffer.RemainingBytes = Debug_RSP_DefaultNumBytesRxedINT;
+				Uart_Ps_0.ReceiveBuffer.RequestedBytes = Uart_Ps_0.ReceiveBuffer.RemainingBytes = Debug_IO_DefaultNumBytesRxedINT;
 				/*TODO ::
 				 * should be updated to point to  Uart_Ps_0.ReceiveBuffer.NextBytePtr = Debug_IO_RSPBufferPtr->nextptr*/
 				Uart_Ps_0.ReceiveBuffer.NextBytePtr = &Debug_IO_RSPBufferPtr[0];
+			  /*after handling driver-related interrupt , call RSP-related Handler for further high-level handling of packet*/
+
+				Debug_Port.Debug_RSPCallback((void *) 0);
 
 
 
 			break;
 
 			default:
-				print("In Debug_IO HAndler\n");
-				print("Handling unknown Event\n");
+				//print("In Debug_IO HAndler\n");
+				//print("Handling unknown Event\n");
 
 			break;
   }
-  /*after handling driver-related interrupt , call RSP-related Handler for further high-level handling of packet*/
-
-  Debug_Port.Debug_RSPCallback((void *) 0);
 
 }
 
@@ -445,77 +445,81 @@ switch(Event)
 
 void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, CPU_INT08U *RSPRxBufferPtr)
 {
-							/***** Initialize port *********/
+							/*********** Initialize port **************/
 
 				/*** In this case , we need to initialize Xilinx xuartps module ****/
 
-	XUartPs_Config *Config_0;
+	   XUartPs_Config *Config_0;
 
-	/*XUartPs_Handler APPUartHandler = BSP_UART_Handler;*/
+	    /*XUartPs_Handler APPUartHandler = BSP_UART_Handler;*/
 
 	        /*
 	    	 * Initialize the UART driver so that it's ready to use
 	    	 * Look up the configuration in the config table, then initialize it.
 	    	 */
-	    Config_0 = XUartPs_LookupConfig(UART_DEVICE_ID);
-	    XUartPs_CfgInitialize(&Uart_Ps_0, Config_0, Config_0->BaseAddress);
-	    XUartPs_SetBaudRate(&Uart_Ps_0, 115200);
+	   Config_0 = XUartPs_LookupConfig(UART_DEVICE_ID);
+	   XUartPs_CfgInitialize(&Uart_Ps_0, Config_0, Config_0->BaseAddress);
+	   XUartPs_SetBaudRate(&Uart_Ps_0, 115200);
 
 
+	   	   	   	   /*************Port Interrupt-Related Configuration***********/
+	    /*
+	     * 1- register  Xilinx-uart-common-handler to CSP vector table
+	     * */
 
-	    /*register  Xilinx-uart-common-handler to CSP vector table and enable it */
-
-	    CSP_IntVectReg((CSP_DEV_NBR)CSP_INT_CTRL_NBR_MAIN,
+	   CSP_IntVectReg((CSP_DEV_NBR)CSP_INT_CTRL_NBR_MAIN,
 	                   (CSP_DEV_NBR    )CSP_INT_SRC_NBR_UART_01,
 	                   (CPU_FNCT_PTR   )XUartPs_InterruptHandler,
                         &Uart_Ps_0);
 
-	    Debug_RSP_DefaultNumBytesRxedINT =   INT_RxCount;
-	    Debug_IO_RSPBufferPtr            =   RSPRxBufferPtr;
-	   	    /*configure the Receive Buffer attributes (set number of requested bytes,remaining bytes , NextBytePtr*/
+	   Debug_IO_DefaultNumBytesRxedINT =   INT_RxCount;
+	   Debug_IO_RSPBufferPtr            =   RSPRxBufferPtr;
+		/*
+		 * 2- configure the Receive Buffer attributes (set number of requested bytes,remaining bytes , NextBytePtr)
+		 * */
 
-	    Uart_Ps_0.ReceiveBuffer.RequestedBytes = Uart_Ps_0.ReceiveBuffer.RemainingBytes = Debug_RSP_DefaultNumBytesRxedINT;
-
-
-	    /*TODO :::
+	   Debug_IO_Port_RxBuffer_Attrs_Init(Debug_IO_DefaultNumBytesRxedINT,Debug_IO_RSPBufferPtr);
+	  // Uart_Ps_0.ReceiveBuffer.RequestedBytes = Uart_Ps_0.ReceiveBuffer.RemainingBytes = Debug_IO_DefaultNumBytesRxedINT;
+	   	   /*TODO :::
 	     * should be updated to point to  Uart_Ps_0.ReceiveBuffer.NextBytePtr = Debug_IO_RSPBufferPtr->nextptr*/
-	    Uart_Ps_0.ReceiveBuffer.NextBytePtr = &Debug_IO_RSPBufferPtr[0];
+	  // Uart_Ps_0.ReceiveBuffer.NextBytePtr = &Debug_IO_RSPBufferPtr[0];
 
-	    /****** register the Debug-related Handler for Port interrupt******/
+	    /*
+	     * 3- register the Debug-related Handler for Port interrupt to be called from Global Xilinx Handler
+	     * */
 
-	    	    XUartPs_SetHandler(&Uart_Ps_0, Debug_IO_PortHandler ,
+	   XUartPs_SetHandler(&Uart_Ps_0, Debug_IO_PortHandler ,
 	    	    		    				   (void *)0);
 
-	        /*
-	    	 * Enable the interrupt of the UART so interrupts will occur,
-	    	 */
-	    	    /*need explicitly to unify the Rx-Tigger-level of UART registers and the RSP-needded Rx Trigger Level*/
-	    	 // XUartPs_WriteReg(Config_0->BaseAddress,
-	    	   //	   	    			   XUARTPS_RXWM_OFFSET, Debug_RSP_DefaultNumBytesRxedINT);
-	    	    XUartPs_WriteReg(Config_0->BaseAddress,
-	    	    		XUARTPS_TXWM_OFFSET, Debug_RSP_DefaultNumBytesRxedINT);
-	    //CPU_INT32U TestIntMask = XUARTPS_IXR_RXOVR | XUARTPS_IXR_RXFULL  ;
-	    //CPU_INT32U TestIntMask =  XUARTPS_IXR_RXFULL  ;
-	    	  CPU_INT32U TestIntMask = XUARTPS_IXR_TTRIG;
-	     XUartPs_SetInterruptMask(&Uart_Ps_0, TestIntMask);
+		/*
+		 *  4- need explicitly to unify the Rx-Tigger-level of UART registers and the RSP-needed Rx Trigger Level
+		 *  */
+	   XUartPs_WriteReg(Config_0->BaseAddress,
+	    	  	   	    			   XUARTPS_RXWM_OFFSET, Debug_IO_DefaultNumBytesRxedINT);
+	    /*
+	     * 5- Enable the individual UART interrupts masks so interrupts will occur,
+	     * */
 
-		    /*Enable GLobal UART interrupt */
-		//    CSP_IntEn(CSP_INT_CTRL_NBR_MAIN,CSP_INT_SRC_NBR_UART_01);
+	   CPU_INT32U TestIntMask = XUARTPS_IXR_RXOVR;
+	   XUartPs_SetInterruptMask(&Uart_Ps_0, TestIntMask);
 
-		 CPU_INT32U ImrRegister = XUartPs_ReadReg(Uart_Ps_0.Config.BaseAddress,
-		    		 				  XUARTPS_IMR_OFFSET);
+		/*
+		 * 6- Enable GLobal UART interrupt
+		 * */
+	   CSP_IntEn(CSP_INT_CTRL_NBR_MAIN,CSP_INT_SRC_NBR_UART_01);
+
 
 		    /***** Initialize port callback functions and other attributes*********/
 
-        Debug_Port.Debug_Read_char           = Debug_UART_Read_char;
-        Debug_Port.Debug_Write_char          = Debug_UART_Write_char;
-        Debug_Port.Debug_Read_Buffer         = Debug_UART_Read_Buffer;
-        Debug_Port.Debug_Write_Buffer        = Debug_UART_Write_Buffer;
-        Debug_Port.Debug_Read_TillChar       = Debug_UART_Read_TillChar;
-        Debug_Port.Init_Port                 = Init_UART_Port;
-        Debug_Port.Debug_RSPCallback         = RSPPort_Handler;
-        Debug_Port.Port_type                 = Debug_IO_UART;
-        Debug_Port.Debug_Read_IgnoreTillChar = Debug_UART_Read_IgnoreTillChar;
+       Debug_Port.Debug_Read_char           = Debug_UART_Read_char;
+       Debug_Port.Debug_Write_char          = Debug_UART_Write_char;
+       Debug_Port.Debug_Read_Buffer         = Debug_UART_Read_Buffer;
+       Debug_Port.Debug_Write_Buffer        = Debug_UART_Write_Buffer;
+       Debug_Port.Debug_Read_TillChar       = Debug_UART_Read_TillChar;
+       Debug_Port.Init_Port                 = Init_UART_Port;
+       Debug_Port.Debug_RSPCallback         = RSPPort_Handler;
+       Debug_Port.Port_type                 = Debug_IO_UART;
+       Debug_Port.Debug_Read_IgnoreTillChar = Debug_UART_Read_IgnoreTillChar;
 
 
                              	    					/******TODO ::
@@ -524,6 +528,84 @@ void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, 
 
 
 }
+
+/*
+*********************************************************************************************************
+*                                               Debug_IO_Port_Buffer_Attrs_Init()
+*
+* Description : this function
+*
+* Argument(s) :
+*
+* Return(s)   : none.
+*
+* Caller(s)   :
+*
+* Note(s)     : (1)
+*
+*               (2)
+*********************************************************************************************************
+*/
+void Debug_IO_Port_RxBuffer_Attrs_Init(CPU_INT32U RequestedBytes ,CPU_INT08U *BufPtr )
+{
+	Uart_Ps_0.ReceiveBuffer.RequestedBytes = Uart_Ps_0.ReceiveBuffer.RemainingBytes = RequestedBytes;
+	Uart_Ps_0.ReceiveBuffer.NextBytePtr = BufPtr;
+}
+
+/*
+*********************************************************************************************************
+*                                               Debug_IO_Port_InterruptDisable()
+*
+* Description : this function
+*
+* Argument(s) :
+*
+* Return(s)   : none.
+*
+* Caller(s)   :
+*
+* Note(s)     : (1)
+*
+*               (2)
+*********************************************************************************************************
+*/
+ CPU_INT32U Debug_IO_Port_InterruptDisable()
+ {
+	 /*
+	 		 * Disable all the interrupts.
+	 		 * This stops a previous operation that may be interrupt driven
+	 		 */
+	 		CPU_INT32U Port_IntState = XUartPs_ReadReg(Uart_Ps_0.Config.BaseAddress,
+	 					  XUARTPS_IMR_OFFSET);
+	 		XUartPs_WriteReg(Uart_Ps_0.Config.BaseAddress, XUARTPS_IDR_OFFSET,
+	 			XUARTPS_IXR_MASK);
+	 		return Port_IntState;
+ }
+
+ /*
+ *********************************************************************************************************
+ *                                               Debug_IO_Port_InterruptRestore()
+ *
+ * Description : this function
+ *
+ * Argument(s) :
+ *
+ * Return(s)   : none.
+ *
+ * Caller(s)   :
+ *
+ * Note(s)     : (1)
+ *
+ *               (2)
+ *********************************************************************************************************
+ */
+ void Debug_IO_Port_InterruptRestore(CPU_INT32U IntState)
+ {
+	 /* Restore the interrupt state	 */
+	 	XUartPs_WriteReg(Uart_Ps_0.Config.BaseAddress, XUARTPS_IER_OFFSET,
+	 			IntState);
+ }
+
 
 /*Just for unit test*/
 static void debug_uart_handlerTest(void *packetInfo)

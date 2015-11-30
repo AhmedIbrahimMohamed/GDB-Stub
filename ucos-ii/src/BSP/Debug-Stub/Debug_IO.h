@@ -64,7 +64,7 @@
 *********************************************************************************************************
 */
 /*This is the default Number of bytes that  RSP module needs from IO module when receive interrupt occurs*/
-EXTERN CPU_INT08U Debug_RSP_DefaultNumBytesRxedINT;
+EXTERN CPU_INT08U Debug_IO_DefaultNumBytesRxedINT;
 
 typedef enum {
 	                        Debug_IO_UART ,
@@ -126,6 +126,10 @@ EXTERN Debug_IO_Port Debug_Port;
 *********************************************************************************************************
 */
 EXTERN void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, CPU_INT08U *RSPRxBufferPtr);
+EXTERN void Debug_IO_Port_RxBuffer_Attrs_Init(CPU_INT32U RequestedBytes ,CPU_INT08U *BufPtr );
+EXTERN CPU_INT32U Debug_IO_Port_InterruptDisable();
+EXTERN void Debug_IO_Port_InterruptRestore(CPU_INT32U IntState);
+
 /*For testing only*/
 EXTERN  void Debug_UART_Test(void);
 

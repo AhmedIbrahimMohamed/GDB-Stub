@@ -201,6 +201,8 @@
 #define Excep_Vector_Prefetch_Offset      0x0C
 
 
+/*Reset Register Address*/
+#define PSS_RST_CTRL_Address			0xF8000200
 		/*
 		****************************************************************************************
 		*                                       Registers' CONFIGURATION

@@ -141,6 +141,7 @@ static CPU_INT08U Debug_RSP_Byte2Hex(CPU_INT08U halfbyte);
 static CPU_INT08U Debug_RSP_Hex2byte(CPU_INT08U Hex);
 static CPU_INT08U Debug_Hex2Word(CPU_INT08U **HexStream, Debug_MemWidth * word);
 static void Debug_Word2Hex(Debug_MemWidth * word, CPU_INT08U **HexStream);
+static void Debug_Text2Hex(CPU_INT08U *TextPtr,CPU_INT08U *HexBuffer);
 static void Debug_RSP_resetBuffer(CPU_INT08U * bufptr);
 static CPU_INT08U IsBreakPointValid(CPU_INT08U * ptr,Debug_MemWidth * bPAddress,CPU_INT32U * bPLength,CPU_INT08U * bPType );
 /*
@@ -613,10 +614,15 @@ do{
 
 
 	  	         case 'D': /* Debugger detach */
+	  	        	Debug_RSP_OK_Packet();
+	  	        	(*Debug_RSP_Commands_Functions[Debug_RSP_DetachKill])(Thread_of_focus,(void *)0);
+	  	        	 break;
 	  	         case 'k': /* Debugger detach via kill */
 	  	        	 //TODO:
 	  	        	 //has an error reply
-	  	        	 return Stub_Detach_Kill;
+	  	        	(*Debug_RSP_Commands_Functions[Debug_RSP_DetachKill])(Thread_of_focus,(void *)0);
+
+	  	        	//return Stub_Detach_Kill;
 	  	             break;
 	  	         case 's': /* sAA..AA    step form address AA..AA (optional) */
 
@@ -785,7 +791,9 @@ do{
  */
  void Debug_RSP_Console_Packet(CPU_INT08U *PacketData)
  {
-      Debug_RSP_Put_Packet(PacketData,Debug_RSP_CONSOLE);
+	  Debug_RSP_resetBuffer(Debug_RSP_Payload_OutBuf);
+	  Debug_Text2Hex(PacketData,&Debug_RSP_Payload_OutBuf[0]);
+      Debug_RSP_Put_Packet(&Debug_RSP_Payload_OutBuf[0],Debug_RSP_CONSOLE);
  }
  /*
   *********************************************************************************************************
@@ -1236,6 +1244,50 @@ return (half_bytecount);
 	 }
  }
 
+ /*
+ *********************************************************************************************************
+ *                                               Debug_Text2Hex()
+ *
+ * Description :
+ *
+ * Argument(s) :
+ *
+ *
+ *
+ * Return(s)   : none
+ *
+ *
+ * Caller(s)   : Debug_RSP_Process_Packet()
+ *
+ * Note(s)     : (1)
+ *
+ *Example usage: if TextPtr is a pointer to string "Hello, world!\n" then HexBuffer would contains "48656c6c6f2c20776f726c64210a"
+ *
+ *
+ *********************************************************************************************************
+ */
+ static void Debug_Text2Hex(CPU_INT08U *TextPtr,CPU_INT08U *HexBuffer)
+ {
+		/*use byte by byte access*/
+		CPU_INT08U HexChar =0 ;
+
+		/*TODO::
+		 * need to check the limits of the hex buffer
+		 * */
+		while(*TextPtr)    /*Count not exceed #bytes in Debug_RSP_IN_OUTBUFMax which is Debug_RSP_IN_OUTBUFMax/2 */
+		        {
+		        	     if( (HexChar = Debug_RSP_Byte2Hex((*(TextPtr)  >> 4) & 0xF) ) == DEBUG_ERROR )       /*convert High Half byte*/
+		        	        break ;
+
+		        	     *(HexBuffer++) = HexChar;
+
+		        	     if( (HexChar = Debug_RSP_Byte2Hex(*(TextPtr++) & 0xF) ) == DEBUG_ERROR)             /*convert Low Half byte */
+	                          break;
+
+		        	     *(HexBuffer++) =	 HexChar;
+		        }
+
+ }
 static void Debug_RSP_resetBuffer(CPU_INT08U * bufptr)
 {
 	CPU_INT32U count;

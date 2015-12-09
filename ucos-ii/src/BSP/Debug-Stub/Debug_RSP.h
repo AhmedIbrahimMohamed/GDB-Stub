@@ -71,7 +71,7 @@
 #define Debug_RSP_IN_OUTBUFMax			400                  /*Maximum length of payload Buffer
                                                                  400 Hex chars = 200 bytes = 50 words*/
 
-#define Debug_NoCheckSumCheck           1
+#define Debug_NoCheckSumCheck           0
 #define USE_ASYNC_INT					1
 
 #define Debug_RSP_HostINTSignal        0x03
@@ -203,7 +203,8 @@ typedef  enum {
                 Debug_RSP_z1 ,/*HW breakpoint*/
                 Debug_RSP_Z1 ,
                 Debug_RSP_ReportHaltReason,
-                Debug_RSP_CONSOLE
+                Debug_RSP_CONSOLE,
+                Debug_RSP_DetachKill
  }Debug_RSP_Commands;
 
 /*Debug_Block_Message :: this is the message  that is passed after Exception Handling to Stub Task when resuming

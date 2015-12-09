@@ -81,7 +81,7 @@ static  void  AppTask1           (void *p_arg);
 static  void  AppPrint           (char *str);
 static  void  AppPrintWelcomeMsg (void);
         void  print              (char *str);
-
+static  void  task1test (int x,int y,int z, int a ,int b ,int c,int d,int f);
 
 /*
 *********************************************************************************************************
@@ -184,7 +184,7 @@ static  void  AppTaskStart (void *p_arg)
 
     	OSTimeDlyHMSM(0, 0, 0, 100);                            /* Waits 100 milliseconds.                              */
 
-    	//AppPrint(".");                                          /* Prints a dot every 100 milliseconds.                 */
+    	AppPrint(".");                                          /* Prints a dot every 100 milliseconds.                 */
     }
 }
 
@@ -293,24 +293,32 @@ static  void  AppTask1 (void *p_arg)
 
 
     AppPrint("Task #1 Started\r\n");
-    asm("bkpt #1");
+    //asm("bkpt #1");
     //asm("ldrb	r3, [r3, r2]");
-    asm("SVC #1");
-    asm(".word 0xec000000");
+    //asm("SVC #1");
+    //asm(".word 0xec000000");
     //p_arg = AppPrint;
     //for testing "stmia"
-   // CPU_INT32U instructions [9] = {0xE12FFF12,0xE12FFF14, 0xE12FFF1F, 0xe12fff1e ,0xe12fff10,0xe12FFF32, 0xe12FFF34,0xe12FFF3F,0xe12fff33 };
+    CPU_INT64U dword = 0x1234567890abcdef;
+    CPU_INT32U instructions [9] = {0xE12FFF12,0xE12FFF14, 0xE12FFF1F, 0xe12fff1e ,0xe12fff10,0xe12FFF32, 0xe12FFF34,0xe12FFF3F,0xe12fff33 };
+    task1test(1,2,3,4,5,6,7,8);
 
     while (DEF_ON) {                                            /* Task body, always written as an infinite loop.       */
 
     	AppPrint("1");
     	OSTimeDlyHMSM(0, 0, 1, 0);                              /* Waits for 1-second.                                  */
 
-    //	AppPrint("1");                                          /* Prints 1 to the UART.                                */
+    AppPrint("1");                                          /* Prints 1 to the UART.                                */
 
     }
 }
+static  void  task1test (int x,int y,int z, int a ,int b ,int c,int d,int f)
+{
+	int n,m;
+	n=x;
+	m=y;
 
+}
 
 /*
 *********************************************************************************************************
@@ -332,8 +340,10 @@ static  void  AppTask2 (void *p_arg)
     (void)p_arg;
 
     AppPrint("Task #2 Started\r\n");
-
-    while (DEF_ON) {                                            /* Task body, always written as an infinite loop.       */
+CPU_INT08U x =1, y = 3;
+if (x == 1)
+	 y=5;
+while (DEF_ON) {                                            /* Task body, always written as an infinite loop.       */
 
     	OSTimeDlyHMSM(0, 0, 2, 0);                              /* Waits for 2-seconds.                                 */
 
@@ -370,6 +380,7 @@ CPU_INT08U i ;
     Debug_Main_Init();
 
     // AppPrint("\nStub Task created \n");
+ //   AppPrint("Hello, world!\n");
 CPU_INT32U instructions [9] = {0xE12FFF12,0xE12FFF14, 0xE12FFF1F, 0xe12fff1e ,0xe12fff10,0xe12FFF32, 0xe12FFF34,0xe12FFF3F,0xe12fff33 };
 //for(i=0;i<9;i++)
 	//Get_Target_DP_Class(instructions[i]);

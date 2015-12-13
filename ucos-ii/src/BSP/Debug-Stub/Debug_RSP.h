@@ -74,7 +74,7 @@
 #define Debug_NoCheckSumCheck           0
 #define USE_ASYNC_INT					1
 
-#define Debug_RSP_HostINTSignal        0x03
+#define Debug_RSP_HostINTSignal         0x33  // the Ascii Code of the '3'
 /*
 *********************************************************************************************************
 *                                          GLOBAL VARIABLES
@@ -203,8 +203,7 @@ typedef  enum {
                 Debug_RSP_z1 ,/*HW breakpoint*/
                 Debug_RSP_Z1 ,
                 Debug_RSP_ReportHaltReason,
-                Debug_RSP_CONSOLE,
-                Debug_RSP_DetachKill
+                Debug_RSP_CONSOLE
  }Debug_RSP_Commands;
 
 /*Debug_Block_Message :: this is the message  that is passed after Exception Handling to Stub Task when resuming

@@ -91,8 +91,11 @@
 /*For Test only SW TxFIFO/RxFIFO used only by debug_IO Module for testing UART Rx,Tx functionality*/
 static CPU_INT08U Debug_IO_TxFIFO[10] = {'H','E','L','O','W','O','R','L','D'};
 static CPU_INT08U Debug_IO_RxFIFO[10];
-
-static CPU_INT08U *Debug_IO_RSPBufferPtr ;
+static int InterruptCounter=0;
+static int GetPacketCounter=0;
+static int BufferRemainingdata =0;
+static int InterruptBufferSize=0;
+static CPU_INT08U Debug_IO_RSPBufferPtr [1000];
 /*Instanse of XUARTPs used for initializing xilinx UART and Rx/Tx functions*/
 static XUartPs         Uart_Ps_0;
 /*instanse of Debug_IO_port data structure  as declared in Debug_IO.h*/
@@ -161,10 +164,11 @@ static void debug_uart_handlerTest(void *);
 
 static CPU_INT08U Debug_UART_Read_char()
 {
-	CPU_INT32U ImrRegister = XUartPs_ReadReg(Uart_Ps_0.Config.BaseAddress,
-		 				  XUARTPS_IMR_OFFSET);
+	/*CPU_INT32U ImrRegister = XUartPs_ReadReg(Uart_Ps_0.Config.BaseAddress,
+		 				  XUARTPS_IMR_OFFSET);*/
 			CPU_INT08U RxChar;
-	while((XUartPs_Recv(&Uart_Ps_0,&RxChar,1)) == 0);
+	//while((XUartPs_Recv(&Uart_Ps_0,&RxChar,1)) == 0);
+	while( Rec_char( &RxChar,1,0 )==0);
 
 	return RxChar;
 }
@@ -216,12 +220,14 @@ static void Debug_UART_Write_char(CPU_INT08U c)
 static CPU_INT08U Debug_UART_Read_Buffer (CPU_INT08U* buf,CPU_INT08U count)
 {
 	CPU_INT08U RxCharCount = 0;
-	RxCharCount = XUartPs_Recv( &Uart_Ps_0, buf, count );
+	//RxCharCount = XUartPs_Recv( &Uart_Ps_0, buf, count );
+	RxCharCount = Rec_char(buf,count,0);
 	while( RxCharCount < count)
 	{
 			/*recalling Receive function with updated buf pointer with already received #bytes */
 
-		RxCharCount += XUartPs_Recv( &Uart_Ps_0, (buf + RxCharCount), (count - RxCharCount) );
+	//	RxCharCount += XUartPs_Recv( &Uart_Ps_0, (buf + RxCharCount), (count - RxCharCount) );
+		RxCharCount+=Rec_char((buf+RxCharCount),(count-RxCharCount),0);
 
 	}
 
@@ -284,12 +290,14 @@ static CPU_INT08U Debug_UART_Write_Buffer(CPU_INT08U* buf,CPU_INT08U count)
 static CPU_INT08U Debug_UART_Read_TillChar(CPU_INT08U* buf , CPU_INT08U StopChar)
 		{
 	CPU_INT08U RxCharCount = 0;
-	RxCharCount = XUartPs_Recv( &Uart_Ps_0, buf, 1 );
+	//RxCharCount = XUartPs_Recv( &Uart_Ps_0, buf, 1 );
+	RxCharCount=Rec_char(buf,1,0);
 		while( *(buf+(RxCharCount-1)) != StopChar)
 		{
 				/*recalling Receive function with updated buf pointer with already received #bytes */
 
-			RxCharCount += XUartPs_Recv( &Uart_Ps_0, (buf + RxCharCount), 1 );
+			//RxCharCount += XUartPs_Recv( &Uart_Ps_0, (buf + RxCharCount), 1 );
+			RxCharCount+=Rec_char((buf+RxCharCount),1,0);
 
 		}
 
@@ -326,10 +334,12 @@ static CPU_INT08U Debug_UART_Read_TillChar(CPU_INT08U* buf , CPU_INT08U StopChar
 
 	 CPU_INT08U  charsink;
 	 CPU_INT08U RxSkippedCharCount = 0;
-    RxSkippedCharCount = XUartPs_Recv( &Uart_Ps_0, &charsink, 1 );
+   // RxSkippedCharCount = XUartPs_Recv( &Uart_Ps_0, &charsink, 1 );
+    RxSkippedCharCount= Rec_char(&charsink,1,0);
     while(charsink != StopChar)
 		  {
-			  RxSkippedCharCount += XUartPs_Recv( &Uart_Ps_0, &charsink, 1 );
+			 // RxSkippedCharCount += XUartPs_Recv( &Uart_Ps_0, &charsink, 1 );
+			  RxSkippedCharCount+=Rec_char(&charsink,1,0);
 		  }
 
 
@@ -383,9 +393,10 @@ static void   Debug_IO_PortHandler(void *CallBackRef, CPU_INT32U Event,
 		CPU_INT32U EventData)
 {
 
-	CPU_INT08U * RxCount;
+	//CPU_INT08U * RxCount;
 switch(Event)
  {
+
 
 			case XUARTPS_EVENT_RECV_DATA :
 				/*Here EventData is number of bytes received*/
@@ -399,10 +410,21 @@ switch(Event)
 				Uart_Ps_0.ReceiveBuffer.RequestedBytes = Uart_Ps_0.ReceiveBuffer.RemainingBytes = Debug_IO_DefaultNumBytesRxedINT;
 				/*TODO ::
 				 * should be updated to point to  Uart_Ps_0.ReceiveBuffer.NextBytePtr = Debug_IO_RSPBufferPtr->nextptr*/
-				Uart_Ps_0.ReceiveBuffer.NextBytePtr = &Debug_IO_RSPBufferPtr[0];
+
+				InterruptCounter=(++InterruptCounter)%InterruptBufferSize;
+
+				Uart_Ps_0.ReceiveBuffer.NextBytePtr = &Debug_IO_RSPBufferPtr[InterruptCounter];
+				BufferRemainingdata++;
+		    	if (Debug_IO_RSPBufferPtr[InterruptCounter-1] == 3)
+			    	{
+		    		BufferRemainingdata--;
+		    		GetPacketCounter=(GetPacketCounter+1)%InterruptBufferSize;
+		    		Debug_Port.Debug_RSPCallback((void *) 1);
+
+			    	}
+
 			  /*after handling driver-related interrupt , call RSP-related Handler for further high-level handling of packet*/
 
-				Debug_Port.Debug_RSPCallback((void *) 0);
 
 
 
@@ -443,12 +465,12 @@ switch(Event)
 *********************************************************************************************************
 */
 
-void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, CPU_INT08U *RSPRxBufferPtr)
+void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, CPU_INT08U *RSPRxBufferPtr,int RSPRXBufferSize)
 {
 							/*********** Initialize port **************/
 
 				/*** In this case , we need to initialize Xilinx xuartps module ****/
-
+		InterruptBufferSize=RSPRXBufferSize;
 	   XUartPs_Config *Config_0;
 
 	    /*XUartPs_Handler APPUartHandler = BSP_UART_Handler;*/
@@ -472,8 +494,8 @@ void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, 
 	                   (CPU_FNCT_PTR   )XUartPs_InterruptHandler,
                         &Uart_Ps_0);
 
-	   Debug_IO_DefaultNumBytesRxedINT =   INT_RxCount;
-	   Debug_IO_RSPBufferPtr            =   RSPRxBufferPtr;
+	   Debug_IO_DefaultNumBytesRxedINT = INT_RxCount;
+	 //  Debug_IO_RSPBufferPtr            =   RSPRxBufferPtr;
 		/*
 		 * 2- configure the Receive Buffer attributes (set number of requested bytes,remaining bytes , NextBytePtr)
 		 * */
@@ -499,8 +521,8 @@ void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, 
 	    /*
 	     * 5- Enable the individual UART interrupts masks so interrupts will occur,
 	     * */
-
-	   CPU_INT32U TestIntMask = XUARTPS_IXR_RXOVR;
+       //XUARTPS_IXR_RXFULL
+	   CPU_INT32U TestIntMask = XUARTPS_IXR_RXOVR|XUARTPS_IXR_RXFULL;
 	   XUartPs_SetInterruptMask(&Uart_Ps_0, TestIntMask);
 
 		/*
@@ -628,7 +650,7 @@ print (Debug_IO_TxFIFO);
 
 	 CPU_INT08U *c;
 	//Debug_IO_TxFIFO = {'H','E','L','O','W','O','R','L','D'};
-	Debug_IO_init(debug_uart_handlerTest,10,Debug_IO_RxFIFO);
+	Debug_IO_init(debug_uart_handlerTest,10,Debug_IO_RxFIFO,50);
 	print("In Debug UART test\n");
 	/*c = Debug_Port.Debug_Read_char();
 	Debug_Port.Debug_Write_char(*c);
@@ -640,3 +662,22 @@ print (Debug_IO_TxFIFO);
 
 }
 
+unsigned int  Rec_char( CPU_INT08U *Ptr,int NReqchar,CPU_INT08U IsIntChar )
+{ int i=0;
+
+
+		  if(BufferRemainingdata>0)
+		  {
+				for(i=0;(i<NReqchar && i<BufferRemainingdata);i++)
+				{
+					(*(Ptr+i))=Debug_IO_RSPBufferPtr[((GetPacketCounter+i)%InterruptBufferSize)];
+					BufferRemainingdata--;
+				}
+				GetPacketCounter=( GetPacketCounter+NReqchar)%InterruptBufferSize;
+		  }
+
+
+  // i considered the received counter.
+
+  return i;
+}

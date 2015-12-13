@@ -689,45 +689,6 @@ CPU_INT08U Debug_Main_RemoveBreakPoint( Debug_TID_t ThreadID,void *CommandParam)
 
 }
 
-/*
-*********************************************************************************************************
-*                                               Debug_Main_DetachKill()
-*
-* Description :
-* Argument(s) : none.
-*
-* Return(s)   : none.
-*
-* Caller(s)   :
-*
-* Note(s)     : (1)
-*
-*               (2)
-*********************************************************************************************************
-*/
-static CPU_INT08U Debug_Main_DetachKill(Debug_TID_t ThreadID,void *CommandParam)
-{
-	//Remove all inserted breakpoint if exist
-	CPU_INT08U BKPTID ;
-	/*for (BKPTID = 0; BKPTID < GDB_MAX_BREAKPOINTS; BKPTID++) {
-		if (Gdb_BreakList[BKPTID].state == BP_ACTIVE)
-		{
-			Gdb_BreakList[BKPTID].state = BP_REMOVED;
-			extern void Xil_ICacheInvalidateLine(unsigned int adr);Get fresh value at instruction address
-			Xil_ICacheInvalidateLine(Gdb_BreakList[BKPTID].bpt_addr);
-			CPU_INT08U error = Gdb_Arch_Remove_BreakPoint(Gdb_BreakList[BKPTID].bpt_addr,(char *)(Gdb_BreakList[BKPTID].saved_instr));
-		}
-	}
-*/
-/*Issue a SW reset Exception*/
-	Debug_MemWidth  *ResetRegisterAddress = PSS_RST_CTRL_Address;
-	CPU_INT32U resetReg = *ResetRegisterAddress;
-	*ResetRegisterAddress = 1 ; /*ISsue a SW Reset*/
-	extern void Xil_ICacheInvalidateLine(unsigned int adr);/*Get fresh value at instruction address*/
-		Xil_ICacheInvalidateLine(ResetRegisterAddress);
-
-	return DEBUG_SUCCESS;
-}
 
 /*
 *********************************************************************************************************
@@ -762,12 +723,8 @@ static void Debug_Main_Init_CommandFunctions()
    Debug_RSP_Commands_Functions[Debug_RSP_Z0]            = Debug_Main_InsertBreakPoint;
    Debug_RSP_Commands_Functions[Debug_RSP_z1]            = Debug_Main_RemoveBreakPoint;
    Debug_RSP_Commands_Functions[Debug_RSP_Z1]            = Debug_Main_InsertBreakPoint;
-   Debug_RSP_Commands_Functions[Debug_RSP_DetachKill]    = Debug_Main_DetachKill;
    Debug_RSP_Commands_Functions[Debug_RSP_ReportHaltReason] = Debug_Main_Report_Halt_Reason;
-
  }
-
-
 
 void Gdb_Handle_Exception(CPU_INT08U Exception_ID)
 {

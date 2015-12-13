@@ -125,14 +125,14 @@ EXTERN Debug_IO_Port Debug_Port;
 *                                         FUNCTION PROTOTYPES
 *********************************************************************************************************
 */
-EXTERN void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, CPU_INT08U *RSPRxBufferPtr);
+EXTERN void Debug_IO_init(Debug_IO_RSPHandler RSPPort_Handler, CPU_INT08U INT_RxCount, CPU_INT08U *RSPRxBufferPtr,int RSPRXBufferSize);
 EXTERN void Debug_IO_Port_RxBuffer_Attrs_Init(CPU_INT32U RequestedBytes ,CPU_INT08U *BufPtr );
 EXTERN CPU_INT32U Debug_IO_Port_InterruptDisable();
 EXTERN void Debug_IO_Port_InterruptRestore(CPU_INT32U IntState);
 
 /*For testing only*/
 EXTERN  void Debug_UART_Test(void);
-
+EXTERN unsigned int  Rec_char( CPU_INT08U *Ptr,int NReqchar,CPU_INT08U IsIntChar );
 
 /*
 *********************************************************************************************************

@@ -141,7 +141,6 @@ static CPU_INT08U Debug_RSP_Byte2Hex(CPU_INT08U halfbyte);
 static CPU_INT08U Debug_RSP_Hex2byte(CPU_INT08U Hex);
 static CPU_INT08U Debug_Hex2Word(CPU_INT08U **HexStream, Debug_MemWidth * word);
 static void Debug_Word2Hex(Debug_MemWidth * word, CPU_INT08U **HexStream);
-static void Debug_Text2Hex(CPU_INT08U *TextPtr,CPU_INT08U *HexBuffer);
 static void Debug_RSP_resetBuffer(CPU_INT08U * bufptr);
 static CPU_INT08U IsBreakPointValid(CPU_INT08U * ptr,Debug_MemWidth * bPAddress,CPU_INT32U * bPLength,CPU_INT08U * bPType );
 /*
@@ -201,7 +200,7 @@ void Debug_RSP_Init(void)
 
 	/*Call Debug_IO module initialization function */
 
-	Debug_IO_init(Debug_RSP_Port_IntHandler,Debug_RSP_DefaultNumBytesRxedINT,Debug_RSP_ReceiveBuffer);
+	Debug_IO_init(Debug_RSP_Port_IntHandler,Debug_RSP_DefaultNumBytesRxedINT,Debug_RSP_ReceiveBuffer,Debug_RSP_Max_BufferLen);
 	//Debug_IO_init(Debug_RSP_Port_IntHandler,Debug_RSP_DefaultNumBytesRxedINT,Debug_RSP_Payload_InBuf);
 
 	Debug_RSP_InitCmmands_FunctionsList();
@@ -236,7 +235,7 @@ void Debug_RSP_Init(void)
  {
 #if USE_ASYNC_INT == 1
 
-	 CPU_INT32U Port_IntState = Debug_IO_Port_InterruptDisable();
+	//CPU_INT32U Port_IntState = Debug_IO_Port_InterruptDisable();
 
 #endif
 	 CPU_INT08U Char;
@@ -288,14 +287,22 @@ void Debug_RSP_Init(void)
 	 Char = Debug_Port.Debug_Read_char();
 
 	 if (Char == '+')
-		 return;
+	 {
+		#if USE_ASYNC_INT == 1
+			//Debug_IO_Port_InterruptRestore(Port_IntState);
+		#endif
+	      return;
+	 }
 	 if(Char == '$')  /*What does this mean , GDB Reconnects? as mentioned in RT-Thread Stub*/
 
 	 {
 
 		 /*Nacks this packet*/
 		 Debug_RSP_Nacks();
-          /*TODO:: discuss :
+			#if USE_ASYNC_INT == 1
+			//	Debug_IO_Port_InterruptRestore(Port_IntState);
+			#endif
+					  /*TODO:: discuss :
            * Flush Transmit Buffer as RT-Thread Stub*/
           /*why we do not flush the Receiver too*/
           return;
@@ -304,10 +311,11 @@ void Debug_RSP_Init(void)
 	 }
 	 /*else , retransmit packet! assume we receive a '-' NACKing packet we sent*/
 
-  }
+	}
 #if USE_ASYNC_INT == 1
-	Debug_IO_Port_InterruptRestore(Port_IntState);
+	//Debug_IO_Port_InterruptRestore(Port_IntState);
 #endif
+
  }
  /*
  *********************************************************************************************************
@@ -332,7 +340,7 @@ void Debug_RSP_Init(void)
 
 #if USE_ASYNC_INT == 1
 
-	 CPU_INT32U Port_IntState = Debug_IO_Port_InterruptDisable();
+	// CPU_INT32U Port_IntState = Debug_IO_Port_InterruptDisable();
 
 #endif
 	 //CPU_INT08U *Sinkptr;
@@ -396,7 +404,7 @@ do{
 
 //}while(PacketCheckSum != CalcChecksum);/*re-receive <--> ack/Nack Cycle*/
 #if USE_ASYNC_INT == 1
-	Debug_IO_Port_InterruptRestore(Port_IntState);
+	//Debug_IO_Port_InterruptRestore(Port_IntState);
 #endif
  }
 
@@ -614,15 +622,10 @@ do{
 
 
 	  	         case 'D': /* Debugger detach */
-	  	        	Debug_RSP_OK_Packet();
-	  	        	(*Debug_RSP_Commands_Functions[Debug_RSP_DetachKill])(Thread_of_focus,(void *)0);
-	  	        	 break;
 	  	         case 'k': /* Debugger detach via kill */
 	  	        	 //TODO:
 	  	        	 //has an error reply
-	  	        	(*Debug_RSP_Commands_Functions[Debug_RSP_DetachKill])(Thread_of_focus,(void *)0);
-
-	  	        	//return Stub_Detach_Kill;
+	  	        	 return Stub_Detach_Kill;
 	  	             break;
 	  	         case 's': /* sAA..AA    step form address AA..AA (optional) */
 
@@ -636,7 +639,7 @@ do{
 							/*3- activate all SW breakpoints to be hit when resumed*/
 							//Activate_Sw_BreakPoints();
 							/*4- prepare for async interrupt signal from GDB*/
-							Debug_IO_Port_RxBuffer_Attrs_Init(Debug_RSP_DefaultNumBytesRxedINT,Debug_RSP_ReceiveBuffer);
+							//Debug_IO_Port_RxBuffer_Attrs_Init(Debug_RSP_DefaultNumBytesRxedINT,Debug_RSP_ReceiveBuffer);
 
 							/*5- Pend Stub Task so that program resumes */
 							stub_message = (*Debug_Stub_PendPtr)();
@@ -674,7 +677,7 @@ do{
 
 					err = (*Debug_RSP_Commands_Functions[Debug_RSP_c])(Thread_of_focus,(void *)Resume_Address);
 					/*2- prepare for async interrupt signal from GDB*/
-					Debug_IO_Port_RxBuffer_Attrs_Init(Debug_RSP_DefaultNumBytesRxedINT,Debug_RSP_ReceiveBuffer);
+					//Debug_IO_Port_RxBuffer_Attrs_Init(Debug_RSP_DefaultNumBytesRxedINT,Debug_RSP_ReceiveBuffer);
 
 
 					/*3- pend on exception occurance */
@@ -791,9 +794,7 @@ do{
  */
  void Debug_RSP_Console_Packet(CPU_INT08U *PacketData)
  {
-	  Debug_RSP_resetBuffer(Debug_RSP_Payload_OutBuf);
-	  Debug_Text2Hex(PacketData,&Debug_RSP_Payload_OutBuf[0]);
-      Debug_RSP_Put_Packet(&Debug_RSP_Payload_OutBuf[0],Debug_RSP_CONSOLE);
+      Debug_RSP_Put_Packet(PacketData,Debug_RSP_CONSOLE);
  }
  /*
   *********************************************************************************************************
@@ -840,13 +841,14 @@ do{
  */
  static void Debug_RSP_Port_IntHandler(void *packetInfo)
 {
-	 if(Debug_RSP_ReceiveBuffer[0] == Debug_RSP_HostINTSignal)
-	 {
-		 Debug_RSP_ReceiveBuffer[0] = 0;
-		 (*Debug_RSP_MainHandler)((void*) 0);
 
+	 //CPU_INT08U INTChar;
+	 //Rec_char(&INTChar,1,1);
+		if((int)packetInfo)
+		{
 
-	 }
+				 (*Debug_RSP_MainHandler)((void*) 0);
+		}
 
 
 
@@ -1244,50 +1246,6 @@ return (half_bytecount);
 	 }
  }
 
- /*
- *********************************************************************************************************
- *                                               Debug_Text2Hex()
- *
- * Description :
- *
- * Argument(s) :
- *
- *
- *
- * Return(s)   : none
- *
- *
- * Caller(s)   : Debug_RSP_Process_Packet()
- *
- * Note(s)     : (1)
- *
- *Example usage: if TextPtr is a pointer to string "Hello, world!\n" then HexBuffer would contains "48656c6c6f2c20776f726c64210a"
- *
- *
- *********************************************************************************************************
- */
- static void Debug_Text2Hex(CPU_INT08U *TextPtr,CPU_INT08U *HexBuffer)
- {
-		/*use byte by byte access*/
-		CPU_INT08U HexChar =0 ;
-
-		/*TODO::
-		 * need to check the limits of the hex buffer
-		 * */
-		while(*TextPtr)    /*Count not exceed #bytes in Debug_RSP_IN_OUTBUFMax which is Debug_RSP_IN_OUTBUFMax/2 */
-		        {
-		        	     if( (HexChar = Debug_RSP_Byte2Hex((*(TextPtr)  >> 4) & 0xF) ) == DEBUG_ERROR )       /*convert High Half byte*/
-		        	        break ;
-
-		        	     *(HexBuffer++) = HexChar;
-
-		        	     if( (HexChar = Debug_RSP_Byte2Hex(*(TextPtr++) & 0xF) ) == DEBUG_ERROR)             /*convert Low Half byte */
-	                          break;
-
-		        	     *(HexBuffer++) =	 HexChar;
-		        }
-
- }
 static void Debug_RSP_resetBuffer(CPU_INT08U * bufptr)
 {
 	CPU_INT32U count;
